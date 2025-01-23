@@ -1,0 +1,3 @@
+[submodule "flatcitybuf"]
+	path = flatcitybuf
+	url = git@github.com:HideBa/flatcitybuf.git
