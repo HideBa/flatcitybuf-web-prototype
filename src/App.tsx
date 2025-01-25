@@ -18,10 +18,20 @@ import useHooks from "./hooks";
 import JsonViewer from "./components/jsonViewer";
 
 function App() {
-  const delftLatLng = Cesium.Cartesian3.fromDegrees(4.360011, 52.012093, 1000);
+  const delftLatLng = Cesium.Cartesian3.fromDegrees(
+    4.369802767481661,
+    52.00151347611216,
+    1000
+  );
   const offset = new Cesium.Cartesian3(0, 0, 1000);
+  const delftExtent = Cesium.Rectangle.fromDegrees(
+    4.361377972223209,
+    51.996144417611504,
+    4.378227562740112,
+    52.00688253461282
+  );
 
-  const fcbUrl = "http://127.0.0.1:5501/src/ts/delft_bbox.fcb";
+  const fcbUrl = "https://storage.googleapis.com/flatcitybuf/delft_bbox.fcb";
   const {
     viewerRef,
     rectangle,
@@ -39,7 +49,7 @@ function App() {
     <div className="h-screen w-screen">
       <Allotment vertical className="h-full">
         {/* Map Container */}
-        <Allotment.Pane minSize={300}>
+        <Allotment.Pane minSize={200} preferredSize={300}>
           <div className="relative h-full">
             <div className="absolute top-4 left-4 z-10 flex gap-2">
               <Button
@@ -66,6 +76,17 @@ function App() {
               full
             >
               <Scene />
+
+              {/* Show extent of data for Delft */}
+              <Entity>
+                <RectangleGraphics
+                  coordinates={delftExtent}
+                  material={Cesium.Color.GRAY.withAlpha(0.3)}
+                  outline
+                  outlineColor={Cesium.Color.GRAY}
+                  outlineWidth={2}
+                />
+              </Entity>
 
               <CameraLookAt target={delftLatLng} offset={offset} once />
               <ImageryLayer
@@ -105,7 +126,7 @@ function App() {
                     coordinates={rectangle}
                     material={
                       isDrawing
-                        ? Cesium.Color.GRAY.withAlpha(0.2)
+                        ? Cesium.Color.GRAY.withAlpha(0.4)
                         : Cesium.Color.GRAY.withAlpha(0.8)
                     }
                     outline
@@ -118,7 +139,7 @@ function App() {
         </Allotment.Pane>
 
         {/* Result Container */}
-        <Allotment.Pane minSize={100} preferredSize={300}>
+        <Allotment.Pane minSize={200} preferredSize={300}>
           <div className="h-full bg-background p-4">
             <div className="grid grid-cols-2 gap-4 h-full">
               {result ? (
