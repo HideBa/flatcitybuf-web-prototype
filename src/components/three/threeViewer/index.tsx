@@ -1,7 +1,5 @@
-import React, { useRef, useEffect } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { Environment, OrbitControls } from "@react-three/drei";
-import { TilesRenderer } from "3d-tiles-renderer";
 import * as THREE from "three";
 import Tileset from "../tileset";
 

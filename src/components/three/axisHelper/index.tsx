@@ -1,11 +1,10 @@
-import React from "react";
 import { Text } from "@react-three/drei";
 
-export type AxisHelperProps = {
-  label?: boolean;
-};
+// export type AxisHelperProps = {
+//   label?: boolean;
+// };
 
-const AxisHelper = ({ label = true }: AxisHelperProps) => {
+const AxisHelper = () => {
   return (
     <>
       <axesHelper args={[5]} />

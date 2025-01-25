@@ -1,38 +1,45 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-
 import {
-  Camera,
   CameraLookAt,
-  Cesium3DTileset,
-  CesiumComponentRef,
-  Entity,
-  useCesium,
   ImageryLayer,
   Viewer,
   Scene,
-  Globe,
   ScreenSpaceEventHandler,
   ScreenSpaceEvent,
+  ScreenSpaceCameraController,
+  Entity,
+  RectangleGraphics,
 } from "resium";
 import * as Cesium from "cesium";
-import RectangleDrawer from "./components/cesium/drawRect";
 
-// function App() {
-//   return <ThreeRenderer />;
-// }
-
-// export default App;
+import { Button } from "@/components/ui/button";
+import useHooks from "./hooks";
 
 function App() {
   const delftLatLng = Cesium.Cartesian3.fromDegrees(4.360011, 52.012093, 1000);
   const offset = new Cesium.Cartesian3(0, 0, 1000);
-  const ref = useRef<CesiumComponentRef<Cesium.Viewer>>(null);
 
+  const {
+    viewerRef,
+    rectangle,
+    isDrawing,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    toggleDrawMode,
+    isDrawMode,
+  } = useHooks();
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
+      <Button
+        className="absolute top-4 left-4 z-10"
+        onClick={toggleDrawMode}
+        variant={isDrawMode ? "secondary" : "default"}
+      >
+        Draw Rectangle ({isDrawMode ? "on" : "off"})
+      </Button>
       <Viewer
         full
-        ref={ref}
+        ref={viewerRef}
         timeline={false}
         animation={false}
         homeButton={false}
@@ -41,10 +48,7 @@ function App() {
         sceneModePicker={false}
       >
         <Scene />
-        {/* <Entity>
-          <Cesium3DTileset url="https://data.3dbag.nl/v20241216/3dtiles/lod22/tileset.json" />
-        </Entity> */}
-        {/* <RectangleDrawer /> */}
+
         <CameraLookAt target={delftLatLng} offset={offset} once />
         <ImageryLayer
           imageryProvider={
@@ -57,15 +61,36 @@ function App() {
             })
           }
         />
-        <RectangleDrawer viewerRef={ref} />
-        {/* <ScreenSpaceEventHandler>
+        <ScreenSpaceCameraController
+          enableLook={!isDrawMode}
+          enableRotate={!isDrawMode}
+          enableTilt={!isDrawMode}
+        />
+        <ScreenSpaceEventHandler>
           <ScreenSpaceEvent
-            type={Cesium.ScreenSpaceEventType.LEFT_CLICK}
-            action={(e) => {
-              console.log("e--------", e);
-            }}
+            type={Cesium.ScreenSpaceEventType.LEFT_DOWN}
+            action={handleMouseDown}
           />
-        </ScreenSpaceEventHandler> */}
+          <ScreenSpaceEvent
+            type={Cesium.ScreenSpaceEventType.MOUSE_MOVE}
+            action={handleMouseMove}
+          />
+          <ScreenSpaceEvent
+            type={Cesium.ScreenSpaceEventType.LEFT_UP}
+            action={handleMouseUp}
+          />
+        </ScreenSpaceEventHandler>
+
+        {rectangle && (
+          <Entity>
+            <RectangleGraphics
+              coordinates={rectangle}
+              material={isDrawing ? Cesium.Color.GRAY : Cesium.Color.SKYBLUE}
+              outline
+              outlineColor={Cesium.Color.WHITE}
+            />
+          </Entity>
+        )}
       </Viewer>
     </div>
   );

@@ -1,13 +1,11 @@
-import React, { useRef, useEffect } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { Environment, OrbitControls } from "@react-three/drei";
-import { TilesRenderer } from "3d-tiles-renderer";
 import * as THREE from "three";
-import Tileset from "../../tileset";
+// import Tileset from "../tileset";
 
 const ThreeRenderer = () => {
-  const tilesetUrl =
-    "https://data.3dbag.nl/v20241216/3dtiles/lod22/tileset.json";
+  // const tilesetUrl =
+  //   "https://data.3dbag.nl/v20241216/3dtiles/lod22/tileset.json";
   const cameraPosition = new THREE.Vector3(-85475.666, 5467.51, 8.244);
   return (
     <div id="canvas-container">
@@ -41,7 +39,7 @@ const ThreeRenderer = () => {
         <OrbitControls />
 
         {/* Our 3D Tiles component */}
-        <Tileset url={tilesetUrl} />
+        {/* <Tileset url={tilesetUrl} /> */}
       </Canvas>
     </div>
   );
