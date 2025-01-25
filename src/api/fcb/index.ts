@@ -51,7 +51,6 @@ export const fetchFcb = async (
     }
 
     const headerJson = mapToJson(header);
-    console.log("features", features);
 
     const cjInfo = {
       cj: headerJson,
