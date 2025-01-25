@@ -1,50 +1,59 @@
-# React + TypeScript + Vite
+# FlatCityBuffer Viewer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A front-end prototype implementation for visualizing FlatCityBuffer data, which is a FlatBuffer encoding of CityJSON. This viewer demonstrates efficient spatial data retrieval using HTTP range requests and WebAssembly bindings.
 
-Currently, two official plugins are available:
+<video controls src="https://storage.googleapis.com/flatcitybuf/demo.mp4" title="Title"></video>
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Overview
 
-## Expanding the ESLint configuration
+This project showcases:
+- Efficient spatial data retrieval using FlatCityBuffer's WASM bindings
+- HTTP range requests to fetch only the required data extent
+- Interactive map interface using CesiumJS
+- Real-time visualization of CityJSON data
+- Statistical analysis of building attributes
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+## Features
 
-- Configure the top-level `parserOptions` property like this:
+- 🗺️ Interactive map with drawing tools for area selection
+- 📦 Efficient data loading using HTTP range requests
+- 📊 Statistical analysis of building attributes
+- 🔍 JSON viewer for detailed data inspection
+- 🏗️ Download CityJSONSeq file only for selected area
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Technology Stack
+
+- React + TypeScript
+- Vite for build tooling
+- CesiumJS for map rendering
+- TailwindCSS + shadcn/ui for styling
+- [FlatCityBuffer WASM bindings](https://github.com/flatcitybuf/flatcitybuf-wasm)
+- proj4js for coordinate transformations
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v18 or later)
+- npm (v9 or later)
+- Git
+
+### Installation
+
+1. Clone the repository with submodules:
+```bash
+git clone --recursive https://github.com/yourusername/flatcitybuffer-viewer.git
+cd flatcitybuffer-viewer
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
-
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
-
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+2. Install dependencies:
+```bash
+npm install
 ```
+
+3. Start the development server:
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:3000`
