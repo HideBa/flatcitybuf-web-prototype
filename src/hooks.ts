@@ -2,6 +2,17 @@ import * as Cesium from "cesium";
 import { Cartesian2 } from "cesium";
 import { useState, useCallback, useRef, useMemo } from "react";
 import { CesiumComponentRef } from "resium";
+import { fetchFcb, getCjSeq } from "./api/fcb";
+import proj4 from "proj4";
+
+// Define coordinate systems
+proj4.defs([
+  ["EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs"],
+  [
+    "EPSG:28992",
+    "+proj=sterea +lat_0=52.1561605555556 +lon_0=5.38763888888889 +k=0.9999079 +x_0=155000 +y_0=463000 +ellps=bessel +towgs84=593.16,26.15,478.54,-6.3239,-0.5008,-5.5487,4.0775 +units=m +no_defs +type=crs",
+  ],
+]);
 
 type EventActionParams =
   | {
@@ -12,13 +23,27 @@ type EventActionParams =
       endPosition: Cartesian2;
     };
 
-const useHooks = () => {
+type Props = {
+  fcbUrl: string;
+};
+
+type CjInfo = {
+  features: any[];
+  cj: any;
+  stats: {
+    num_total_features: number;
+    num_selected_features: number;
+  };
+};
+
+const useHooks = ({ fcbUrl }: Props) => {
+  const [result, setResult] = useState<CjInfo | null>(null);
   const viewerRef = useRef<CesiumComponentRef<Cesium.Viewer>>(null);
   const [firstPoint, setFirstPoint] = useState<Cesium.Cartesian3 | null>(null);
   const [currentPoint, setCurrentPoint] = useState<Cesium.Cartesian3 | null>(
     null
   );
-  const [isDrawMode, setIsDrawMode] = useState(false);
+  const [isDrawMode, setIsDrawMode] = useState(true);
   const [isDrawing, setIsDrawing] = useState(false);
   const [rectangle, setRectangle] = useState<Cesium.Rectangle | null>(null);
   const rectangleCallbackProperty = useMemo(() => {
@@ -100,6 +125,45 @@ const useHooks = () => {
     [isDrawMode, firstPoint]
   );
 
+  const rectToDegrees = useCallback((rect: Cesium.Rectangle) => {
+    return [
+      [Cesium.Math.toDegrees(rect.west), Cesium.Math.toDegrees(rect.south)],
+      [Cesium.Math.toDegrees(rect.east), Cesium.Math.toDegrees(rect.north)],
+    ];
+  }, []);
+
+  const handleFetchFcb = useCallback(async () => {
+    if (!rectangle) return;
+    //convert lat lng to dutch coordinate system
+    const [min, max] = rectToDegrees(rectangle);
+
+    const minPoint = proj4("EPSG:4326", "EPSG:28992", min);
+    const maxPoint = proj4("EPSG:4326", "EPSG:28992", max);
+    const result = await fetchFcb(fcbUrl, [
+      minPoint[0],
+      minPoint[1],
+      maxPoint[0],
+      maxPoint[1],
+    ]);
+    setResult(result);
+  }, [fcbUrl, rectToDegrees, rectangle]);
+
+  const handleCjSeqDownload = useCallback(async () => {
+    if (!rectangle) return;
+    const [min, max] = rectToDegrees(rectangle);
+
+    const minPoint = proj4("EPSG:4326", "EPSG:28992", min);
+    const maxPoint = proj4("EPSG:4326", "EPSG:28992", max);
+    const cjSeq = await getCjSeq(fcbUrl, [
+      minPoint[0],
+      minPoint[1],
+      maxPoint[0],
+      maxPoint[1],
+    ]);
+    const url = URL.createObjectURL(cjSeq);
+    window.open(url, "_blank");
+  }, [fcbUrl, rectToDegrees, rectangle]);
+
   return {
     viewerRef,
     rectangle: isDrawing ? rectangleCallbackProperty : rectangle,
@@ -109,6 +173,9 @@ const useHooks = () => {
     handleMouseUp,
     toggleDrawMode,
     isDrawMode,
+    handleFetchFcb,
+    result,
+    handleCjSeqDownload,
   };
 };
 
