@@ -1,35 +1,74 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import {
+  Camera,
+  CameraLookAt,
+  Cesium3DTileset,
+  CesiumComponentRef,
+  Entity,
+  useCesium,
+  ImageryLayer,
+  Viewer,
+  Scene,
+  Globe,
+  ScreenSpaceEventHandler,
+  ScreenSpaceEvent,
+} from "resium";
+import * as Cesium from "cesium";
+import RectangleDrawer from "./components/cesium/drawRect";
+
+// function App() {
+//   return <ThreeRenderer />;
+// }
+
+// export default App;
 
 function App() {
-  const [count, setCount] = useState(0)
+  const delftLatLng = Cesium.Cartesian3.fromDegrees(4.360011, 52.012093, 1000);
+  const offset = new Cesium.Cartesian3(0, 0, 1000);
+  const ref = useRef<CesiumComponentRef<Cesium.Viewer>>(null);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div style={{ width: "100vw", height: "100vh" }}>
+      <Viewer
+        full
+        ref={ref}
+        timeline={false}
+        animation={false}
+        homeButton={false}
+        baseLayerPicker={false}
+        navigationHelpButton={false}
+        sceneModePicker={false}
+      >
+        <Scene />
+        {/* <Entity>
+          <Cesium3DTileset url="https://data.3dbag.nl/v20241216/3dtiles/lod22/tileset.json" />
+        </Entity> */}
+        {/* <RectangleDrawer /> */}
+        <CameraLookAt target={delftLatLng} offset={offset} once />
+        <ImageryLayer
+          imageryProvider={
+            new Cesium.UrlTemplateImageryProvider({
+              url: "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              minimumLevel: 0,
+              maximumLevel: 18,
+              tileWidth: 256,
+              tileHeight: 256,
+            })
+          }
+        />
+        <RectangleDrawer viewerRef={ref} />
+        {/* <ScreenSpaceEventHandler>
+          <ScreenSpaceEvent
+            type={Cesium.ScreenSpaceEventType.LEFT_CLICK}
+            action={(e) => {
+              console.log("e--------", e);
+            }}
+          />
+        </ScreenSpaceEventHandler> */}
+      </Viewer>
+    </div>
+  );
 }
 
-export default App
+export default App;
