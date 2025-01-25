@@ -1,15 +1,15 @@
 import init, { HttpFcbReader } from "flatcitybuf";
 
 export type CjInfo = {
-  features: any[];
-  cj: any;
+  features: unknown[];
+  cj: unknown;
   stats: {
     num_total_features: number;
     num_selected_features: number;
   };
 };
 // Cache for WASM initialization
-const wasmInitialized = false;
+// const wasmInitialized = false;
 
 const MAX_FEATURES = 2;
 

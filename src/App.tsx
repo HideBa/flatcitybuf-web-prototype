@@ -145,7 +145,8 @@ function App() {
               {result ? (
                 <>
                   <div className="overflow-auto">
-                    <JsonViewer data={result.cj} />
+                    <JsonViewer data={result.cj as object} />{" "}
+                    {/* TODO: fix type */}
                   </div>
                   <div className="overflow-auto">
                     <JsonViewer data={result.features} />
