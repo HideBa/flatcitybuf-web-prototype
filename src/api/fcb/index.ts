@@ -3,15 +3,14 @@ import init, { HttpFcbReader } from "flatcitybuf";
 export type CjInfo = {
   features: unknown[];
   cj: unknown;
-  stats: {
-    num_total_features: number;
-    num_selected_features: number;
+  meta: {
+    features_count: number;
   };
 };
 // Cache for WASM initialization
 // const wasmInitialized = false;
 
-const MAX_FEATURES = 2;
+const MAX_FEATURES = 10;
 
 const initWasm = async () => {
   await init();
@@ -31,17 +30,6 @@ export const fetchFcb = async (
     const reader = await new HttpFcbReader(url);
 
     const header = await reader.header();
-
-    const debugMinX = 84227.77;
-    const debugMinY = 445377.33;
-    const debugMaxX = 85323.23;
-    const debugMaxY = 446334.69;
-
-    console.log("bbox", bbox);
-
-    const debugBbox = [debugMinX, debugMinY, debugMaxX, debugMaxY];
-    console.log(" debug bbox", debugBbox);
-    console.log("debugBbox", debugBbox);
     const bboxIter = await reader.select_bbox(
       bbox[0],
       bbox[1],
@@ -56,11 +44,10 @@ export const fetchFcb = async (
       if (feature === undefined) {
         break;
       }
-      features.push(feature);
-      count++;
-      if (count >= MAX_FEATURES) {
-        break;
+      if (count < MAX_FEATURES) {
+        features.push(feature);
       }
+      count++;
     }
 
     const headerJson = mapToJson(header);
@@ -69,13 +56,10 @@ export const fetchFcb = async (
     const cjInfo = {
       cj: headerJson,
       features,
-      stats: {
-        num_total_features: features.length,
-        num_selected_features: features.length,
+      meta: {
+        features_count: count,
       },
     };
-
-    console.log(cjInfo);
 
     return cjInfo;
   } catch (error) {
@@ -105,17 +89,12 @@ export const getCjSeq = async (
     );
 
     // Add features
-    let count = 0;
     while (true) {
       const feature = await bboxIter.next();
       if (feature === undefined) {
         break;
       }
       jsonlContent += JSON.stringify(feature) + "\n";
-      count++;
-      if (count >= MAX_FEATURES) {
-        break;
-      }
     }
 
     // Create and return file object

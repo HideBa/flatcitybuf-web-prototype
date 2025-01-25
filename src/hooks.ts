@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useMemo } from "react";
 import { CesiumComponentRef } from "resium";
 import { fetchFcb, getCjSeq } from "./api/fcb";
 import proj4 from "proj4";
+import { CjInfo } from "./components/cjpreviewer";
 
 // Define coordinate systems
 proj4.defs([
@@ -23,17 +24,8 @@ type EventActionParams =
       endPosition: Cartesian2;
     };
 
-type Props = {
+export type Props = {
   fcbUrl: string;
-};
-
-type CjInfo = {
-  features: unknown[];
-  cj: unknown;
-  stats: {
-    num_total_features: number;
-    num_selected_features: number;
-  };
 };
 
 const useHooks = ({ fcbUrl }: Props) => {
@@ -59,6 +51,7 @@ const useHooks = ({ fcbUrl }: Props) => {
       ]);
     }, false);
   }, [firstPoint, currentPoint]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const toggleDrawMode = useCallback(() => {
     setIsDrawMode((prev) => {
@@ -132,20 +125,125 @@ const useHooks = ({ fcbUrl }: Props) => {
     ];
   }, []);
 
+  // const calculateStats = (features: any[]) => {
+  //   const roofHeights: number[] = [];
+  //   let greenHouseCount = 0;
+  //   let ahn3Ahn4ChangeCount = 0;
+  //   let unsuccessCount = 0;
+  //   let volumeSum = 0;
+  //   let volumeCount = 0;
+  //   let yearSum = 0;
+  //   let yearCount = 0;
+
+  //   let count = 0;
+  //   features.forEach((feature) => {
+  //     count++;
+  //     if (count > 2) return;
+  //     const cityObjects =
+  //       feature.CityObjects instanceof Map
+  //         ? Array.from(feature.CityObjects.values())
+  //         : [];
+
+  //     cityObjects.forEach((cityObject: any) => {
+  //       console.log("cityObject", cityObject);
+  //       // Convert Map to object if needed
+  //       const attributes =
+  //         cityObject.attributes instanceof Map
+  //           ? Object.fromEntries(cityObject.attributes.values())
+  //           : cityObject.attributes || {};
+
+  //       console.log("attributes", attributes);
+
+  //       // Roof height
+  //       if ("b3_h_dak_50p" in attributes && attributes.b3_h_dak_50p !== null) {
+  //         roofHeights.push(Number(attributes.b3_h_dak_50p));
+  //       }
+
+  //       // Green house/warehouse
+  //       if (
+  //         "b3_kas_warenhuis" in attributes &&
+  //         Number(attributes.b3_kas_warenhuis) === 1
+  //       ) {
+  //         greenHouseCount++;
+  //       }
+
+  //       // AHN3/AHN4 change
+  //       if (
+  //         "b3_mutatie_ahn3_ahn4" in attributes &&
+  //         Number(attributes.b3_mutatie_ahn3_ahn4) === 1
+  //       ) {
+  //         ahn3Ahn4ChangeCount++;
+  //       }
+
+  //       // Unsuccessful cases
+  //       if ("b3_succes" in attributes && Number(attributes.b3_succes) === 0) {
+  //         unsuccessCount++;
+  //       }
+
+  //       // Volume LOD2
+  //       if (
+  //         "b3_volume_lod22" in attributes &&
+  //         attributes.b3_volume_lod22 !== null
+  //       ) {
+  //         volumeSum += Number(attributes.b3_volume_lod22);
+  //         volumeCount++;
+  //       }
+
+  //       // Construction year
+  //       if (
+  //         "oorspronkelijkbouwjaar" in attributes &&
+  //         attributes.oorspronkelijkbouwjaar !== null
+  //       ) {
+  //         yearSum += Number(attributes.oorspronkelijkbouwjaar);
+  //         yearCount++;
+  //       }
+  //     });
+  //   });
+
+  //   // Calculate statistics
+  //   return {
+  //     num_total_features: 1115,
+  //     num_selected_features: features.length,
+  //     median_roof_height:
+  //       roofHeights.length > 0
+  //         ? roofHeights.sort((a, b) => a - b)[
+  //             Math.floor(roofHeights.length / 2)
+  //           ]
+  //         : undefined,
+  //     ratio_of_green_house_warehouse:
+  //       features.length > 0 ? greenHouseCount / features.length : undefined,
+  //     num_ahn3_ahn4_change: ahn3Ahn4ChangeCount,
+  //     unsuccess_num: unsuccessCount,
+  //     ave_volume_lod2: volumeCount > 0 ? volumeSum / volumeCount : undefined,
+  //     ave_construction_year: yearCount > 0 ? yearSum / yearCount : undefined,
+  //   };
+  // };
+
   const handleFetchFcb = useCallback(async () => {
     if (!rectangle) return;
+    setIsLoading(true);
     //convert lat lng to dutch coordinate system
     const [min, max] = rectToDegrees(rectangle);
 
     const minPoint = proj4("EPSG:4326", "EPSG:28992", min);
     const maxPoint = proj4("EPSG:4326", "EPSG:28992", max);
-    const result = await fetchFcb(fcbUrl, [
+    const fetchResult = await fetchFcb(fcbUrl, [
       minPoint[0],
       minPoint[1],
       maxPoint[0],
       maxPoint[1],
     ]);
-    setResult(result);
+    const resultWithStats = {
+      cj: fetchResult.cj,
+      features: fetchResult.features.slice(0, 10),
+      stats: {
+        num_total_features: 1115,
+        num_selected_features: fetchResult.meta.features_count,
+      },
+      // stats: calculateStats(fetchResult.features),
+    };
+    setResult(resultWithStats);
+    setIsLoading(false);
   }, [fcbUrl, rectToDegrees, rectangle]);
 
   const handleCjSeqDownload = useCallback(async () => {
@@ -176,6 +274,7 @@ const useHooks = ({ fcbUrl }: Props) => {
     handleFetchFcb,
     result,
     handleCjSeqDownload,
+    isLoading,
   };
 };
 

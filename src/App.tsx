@@ -15,7 +15,10 @@ import "allotment/dist/style.css";
 
 import { Button } from "@/components/ui/button";
 import useHooks from "./hooks";
-import JsonViewer from "./components/jsonViewer";
+
+import CjPreviewer from "./components/cjpreviewer";
+
+import { Spinner } from "./components/spinner";
 
 function App() {
   const delftLatLng = Cesium.Cartesian3.fromDegrees(
@@ -44,6 +47,7 @@ function App() {
     isDrawMode,
     handleFetchFcb,
     handleCjSeqDownload,
+    isLoading,
   } = useHooks({ fcbUrl });
   return (
     <div className="h-screen w-screen">
@@ -69,6 +73,7 @@ function App() {
               ref={viewerRef}
               timeline={false}
               animation={false}
+              infoBox={false}
               homeButton={false}
               baseLayerPicker={false}
               navigationHelpButton={false}
@@ -140,26 +145,13 @@ function App() {
 
         {/* Result Container */}
         <Allotment.Pane minSize={200} preferredSize={300}>
-          <div className="h-full bg-background p-4">
-            <div className="grid grid-cols-2 gap-4 h-full">
-              {result ? (
-                <>
-                  <div className="overflow-auto">
-                    <JsonViewer data={result.cj as object} />{" "}
-                    {/* TODO: fix type */}
-                  </div>
-                  <div className="overflow-auto">
-                    <JsonViewer data={result.features} />
-                  </div>
-                </>
-              ) : (
-                <div className="text-muted-foreground text-center col-span-2">
-                  No data to display. Draw a rectangle and fetch FCB data to see
-                  results.
-                </div>
-              )}
+          {isLoading ? (
+            <div className="flex justify-center items-center h-full">
+              <Spinner />
             </div>
-          </div>
+          ) : (
+            <CjPreviewer result={result ?? undefined} />
+          )}
         </Allotment.Pane>
       </Allotment>
     </div>
