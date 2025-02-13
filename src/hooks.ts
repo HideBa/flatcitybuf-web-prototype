@@ -1,11 +1,11 @@
 import * as Cesium from "cesium";
-import { Cartesian2 } from "cesium";
+import { type Cartesian2 } from "cesium";
 import { useState, useCallback, useRef, useMemo } from "react";
-import { CesiumComponentRef } from "resium";
-import { fetchFcb, getCjSeq } from "./api/fcb";
+import { type CesiumComponentRef } from "resium";
+import { fetchFcb, fetchFcbWithAttributeConditions, getCjSeq } from "./api/fcb";
 import proj4 from "proj4";
 import { CjInfo } from "./components/cjpreviewer";
-
+import { Condition } from "./feature/attribute/hooks";
 // Define coordinate systems
 proj4.defs([
   ["EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs"],
@@ -246,6 +246,28 @@ const useHooks = ({ fcbUrl }: Props) => {
     setIsLoading(false);
   }, [fcbUrl, rectToDegrees, rectangle]);
 
+  const handleFetchFcbWithAttributeConditions = useCallback(
+    async (attrCond: Condition[]) => {
+      setIsLoading(true);
+
+      const fetchResult = await fetchFcbWithAttributeConditions(
+        fcbUrl,
+        attrCond
+      );
+
+      const resultWithStats = {
+        cj: fetchResult.cj,
+        features: fetchResult.features.slice(0, 10),
+        stats: {
+          num_total_features: 1115,
+          num_selected_features: fetchResult.meta.features_count,
+        },
+      };
+      setResult(resultWithStats);
+      setIsLoading(false);
+    },
+    [fcbUrl]
+  );
   const handleCjSeqDownload = useCallback(async () => {
     if (!rectangle) return;
     const [min, max] = rectToDegrees(rectangle);
@@ -272,6 +294,7 @@ const useHooks = ({ fcbUrl }: Props) => {
     toggleDrawMode,
     isDrawMode,
     handleFetchFcb,
+    handleFetchFcbWithAttributeConditions,
     result,
     handleCjSeqDownload,
     isLoading,

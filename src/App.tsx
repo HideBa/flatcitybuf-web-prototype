@@ -19,6 +19,7 @@ import useHooks from "./hooks";
 import CjPreviewer from "./components/cjpreviewer";
 
 import { Spinner } from "./components/spinner";
+import AttributeConditionForm from "./feature/attribute";
 
 function App() {
   const delftLatLng = Cesium.Cartesian3.fromDegrees(
@@ -34,7 +35,7 @@ function App() {
     52.00688253461282
   );
 
-  const fcbUrl = "https://storage.googleapis.com/flatcitybuf/delft_bbox.fcb";
+  const fcbUrl = "https://storage.googleapis.com/flatcitybuf/delft_attr.fcb";
   const {
     viewerRef,
     rectangle,
@@ -46,6 +47,7 @@ function App() {
     toggleDrawMode,
     isDrawMode,
     handleFetchFcb,
+    handleFetchFcbWithAttributeConditions,
     handleCjSeqDownload,
     isLoading,
   } = useHooks({ fcbUrl });
@@ -63,8 +65,13 @@ function App() {
                 Draw Rectangle ({isDrawMode ? "on" : "off"})
               </Button>
               <Button onClick={handleFetchFcb} disabled={!rectangle}>
-                Fetch FCB
+                Fetch FCB within rectangle
               </Button>
+              <AttributeConditionForm
+                handleFetchFcbWithAttributeConditions={
+                  handleFetchFcbWithAttributeConditions
+                }
+              />
               <Button onClick={handleCjSeqDownload} disabled={!rectangle}>
                 Download CJSeq
               </Button>

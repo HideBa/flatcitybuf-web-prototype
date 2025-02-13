@@ -1,4 +1,5 @@
-import init, { HttpFcbReader } from "flatcitybuf";
+import { type Condition } from "@/feature/attribute/hooks";
+import init, { HttpFcbReader, WasmAttrQuery } from "flatcitybuf";
 
 export type CjInfo = {
   features: unknown[];
@@ -36,6 +37,53 @@ export const fetchFcb = async (
       bbox[2],
       bbox[3]
     );
+
+    const features = [];
+    let count = 0;
+    while (true) {
+      const feature = await bboxIter.next();
+      if (feature === undefined) {
+        break;
+      }
+      if (count < MAX_FEATURES) {
+        features.push(feature);
+      }
+      count++;
+    }
+
+    const headerJson = mapToJson(header);
+
+    const cjInfo = {
+      cj: headerJson,
+      features,
+      meta: {
+        features_count: count,
+      },
+    };
+
+    return cjInfo;
+  } catch (error) {
+    console.error("Error fetching FCB data:", error);
+    throw error;
+  }
+};
+export const fetchFcbWithAttributeConditions = async (
+  url: string,
+  conditions: Condition[]
+) => {
+  try {
+    await initWasm();
+
+    const query = conditions.map((cond) => {
+      return [cond.attribute, cond.operator, cond.value];
+    });
+
+    const attrQuery = new WasmAttrQuery(query);
+
+    const reader = await new HttpFcbReader(url);
+
+    const header = await reader.header();
+    const bboxIter = await reader.select_attr_query(attrQuery);
 
     const features = [];
     let count = 0;

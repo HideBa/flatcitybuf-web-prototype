@@ -1,3 +1,4 @@
 [submodule "flatcitybuf"]
-	path = flatcitybuf
-	url = https://github.com/HideBa/flatcitybuf.git
+path = flatcitybuf
+url = https://github.com/HideBa/flatcitybuf.git
+branch = main
