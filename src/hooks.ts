@@ -227,6 +227,16 @@ const useHooks = ({ fcbUrl }: Props) => {
 
     const minPoint = proj4("EPSG:4326", "EPSG:28992", min);
     const maxPoint = proj4("EPSG:4326", "EPSG:28992", max);
+    console.log("minPoint: ", minPoint);
+    console.log("maxPoint: ", maxPoint);
+
+    const tempminPoint = [79528.94099999999, 426199.813];
+    const tempmaxPoint = [101674.299, 452784.517];
+    const minPoint_latlng = proj4("EPSG:28992", "EPSG:4326", tempminPoint);
+    const maxPoint_latlng = proj4("EPSG:28992", "EPSG:4326", tempmaxPoint);
+    console.log("minPoint_latlng: ", minPoint_latlng);
+    console.log("maxPoint_latlng: ", maxPoint_latlng);
+
     const fetchResult = await fetchFcb(fcbUrl, [
       minPoint[0],
       minPoint[1],

@@ -9,16 +9,16 @@ export type CjInfo = {
   };
 };
 // Cache for WASM initialization
-// const wasmInitialized = false;
+let wasmInitialized = false;
 
 const MAX_FEATURES = 10;
 
 const initWasm = async () => {
   await init();
-  // if (!wasmInitialized) {
-  //   await init();
-  //   wasmInitialized = true;
-  // }
+  if (!wasmInitialized) {
+    await init();
+    wasmInitialized = true;
+  }
 };
 
 export const fetchFcb = async (
@@ -78,6 +78,8 @@ export const fetchFcbWithAttributeConditions = async (
       return [cond.attribute, cond.operator, cond.value];
     });
 
+    console.log("conditions: ", conditions);
+    console.log("query: ", query);
     const attrQuery = new WasmAttrQuery(query);
 
     const reader = await new HttpFcbReader(url);

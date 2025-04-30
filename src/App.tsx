@@ -28,14 +28,17 @@ function App() {
     1000
   );
   const offset = new Cesium.Cartesian3(0, 0, 1000);
-  const delftExtent = Cesium.Rectangle.fromDegrees(
-    4.361377972223209,
-    51.996144417611504,
-    4.378227562740112,
-    52.00688253461282
+
+  const dataExtent = Cesium.Rectangle.fromDegrees(
+    4.293270749721231,
+    51.819302473968676,
+    4.610321175379964,
+    52.06078090037606
   );
 
-  const fcbUrl = "https://storage.googleapis.com/flatcitybuf/delft_attr.fcb";
+  // const fcbUrl = "https://storage.googleapis.com/flatcitybuf/delft_attr.fcb";
+  // const fcbUrl = "https://storage.googleapis.com/flatcitybuf/3dbag_100k.fcb";
+  const fcbUrl = "https://storage.googleapis.com/flatcitybuf/3dbag_partial.fcb";
   const {
     viewerRef,
     rectangle,
@@ -92,7 +95,7 @@ function App() {
               {/* Show extent of data for Delft */}
               <Entity>
                 <RectangleGraphics
-                  coordinates={delftExtent}
+                  coordinates={dataExtent}
                   material={Cesium.Color.GRAY.withAlpha(0.3)}
                   outline
                   outlineColor={Cesium.Color.GRAY}
@@ -116,6 +119,7 @@ function App() {
                 enableLook={!isDrawMode}
                 enableRotate={!isDrawMode}
                 enableTilt={!isDrawMode}
+                enableTranslate={true}
               />
               <ScreenSpaceEventHandler>
                 <ScreenSpaceEvent
