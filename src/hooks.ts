@@ -20,13 +20,22 @@ type MouseEvent = {
   position?: Cartesian2;
   startPosition?: Cartesian2;
   endPosition?: Cartesian2;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 type RectToDegrees = (rect: Cesium.Rectangle) => [number[], number[]];
 
 export type Props = {
   fcbUrl: string;
+};
+
+// Type for the last fetched data
+export type LastFetchedData = {
+  type: "bbox" | "attribute";
+  bbox?: number[];
+  attributes?: Condition[];
+  totalFeatures: number;
+  currentOffset: number;
 };
 
 const useHooks = ({ fcbUrl }: Props) => {
@@ -55,12 +64,8 @@ const useHooks = ({ fcbUrl }: Props) => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Store the last fetched data for use with pagination
-  const [lastFetchedData, setLastFetchedData] = useState<{
-    type: "bbox" | "attribute";
-    bbox?: number[];
-    attributes?: Condition[];
-    totalFeatures: number;
-  } | null>(null);
+  const [lastFetchedData, setLastFetchedData] =
+    useState<LastFetchedData | null>(null);
 
   const toggleDrawMode = useCallback(() => {
     setIsDrawMode((prev) => {
@@ -140,30 +145,23 @@ const useHooks = ({ fcbUrl }: Props) => {
     async (offset = 0, limit = 10) => {
       if (!rectangle) return;
       setIsLoading(true);
-      //convert lat lng to dutch coordinate system
-      const [min, max] = rectToDegrees(rectangle);
 
+      // Convert lat lng to Dutch coordinate system
+      const [min, max] = rectToDegrees(rectangle);
       const minPoint = proj4("EPSG:4326", "EPSG:28992", min);
       const maxPoint = proj4("EPSG:4326", "EPSG:28992", max);
-      console.log("minPoint: ", minPoint);
-      console.log("maxPoint: ", maxPoint);
-
-      const tempminPoint = [79528.94099999999, 426199.813];
-      const tempmaxPoint = [101674.299, 452784.517];
-      const minPoint_latlng = proj4("EPSG:28992", "EPSG:4326", tempminPoint);
-      const maxPoint_latlng = proj4("EPSG:28992", "EPSG:4326", tempmaxPoint);
-      console.log("minPoint_latlng: ", minPoint_latlng);
-      console.log("maxPoint_latlng: ", maxPoint_latlng);
 
       const bbox = [minPoint[0], minPoint[1], maxPoint[0], maxPoint[1]];
 
+      // Use the updated fetchFcb with our efficient reader
       const fetchResult = await fetchFcb(fcbUrl, bbox, offset, limit);
 
-      // Save data for pagination
+      // Update state with pagination info
       setLastFetchedData({
         type: "bbox",
         bbox,
         totalFeatures: fetchResult.meta.features_count,
+        currentOffset: offset + fetchResult.features.length,
       });
 
       const resultWithStats = {
@@ -174,6 +172,7 @@ const useHooks = ({ fcbUrl }: Props) => {
           num_selected_features: fetchResult.meta.features_count,
         },
       };
+
       setResult(resultWithStats);
       setIsLoading(false);
     },
@@ -184,6 +183,7 @@ const useHooks = ({ fcbUrl }: Props) => {
     async (attrCond: Condition[], offset = 0, limit = 10) => {
       setIsLoading(true);
 
+      // Use the updated attribute conditions fetch with our efficient reader
       const fetchResult = await fetchFcbWithAttributeConditions(
         fcbUrl,
         attrCond,
@@ -191,11 +191,12 @@ const useHooks = ({ fcbUrl }: Props) => {
         limit
       );
 
-      // Save data for pagination
+      // Update state with pagination info
       setLastFetchedData({
         type: "attribute",
         attributes: attrCond,
         totalFeatures: fetchResult.meta.features_count,
+        currentOffset: offset + fetchResult.features.length,
       });
 
       const resultWithStats = {
@@ -206,6 +207,7 @@ const useHooks = ({ fcbUrl }: Props) => {
           num_selected_features: fetchResult.meta.features_count,
         },
       };
+
       setResult(resultWithStats);
       setIsLoading(false);
     },
@@ -219,12 +221,19 @@ const useHooks = ({ fcbUrl }: Props) => {
       setIsLoading(true);
 
       if (lastFetchedData.type === "bbox" && lastFetchedData.bbox) {
+        // Use the cached reader state through the closure
         const fetchResult = await fetchFcb(
           fcbUrl,
           lastFetchedData.bbox,
           offset,
           limit
         );
+
+        // Update state with new pagination info
+        setLastFetchedData({
+          ...lastFetchedData,
+          currentOffset: offset + fetchResult.features.length,
+        });
 
         const resultWithStats = {
           cj: fetchResult.cj,
@@ -239,12 +248,19 @@ const useHooks = ({ fcbUrl }: Props) => {
         lastFetchedData.type === "attribute" &&
         lastFetchedData.attributes
       ) {
+        // Use the cached reader state through the closure
         const fetchResult = await fetchFcbWithAttributeConditions(
           fcbUrl,
           lastFetchedData.attributes,
           offset,
           limit
         );
+
+        // Update state with new pagination info
+        setLastFetchedData({
+          ...lastFetchedData,
+          currentOffset: offset + fetchResult.features.length,
+        });
 
         const resultWithStats = {
           cj: fetchResult.cj,
@@ -293,6 +309,7 @@ const useHooks = ({ fcbUrl }: Props) => {
     result,
     handleCjSeqDownload,
     isLoading,
+    lastFetchedData,
   };
 };
 

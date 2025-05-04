@@ -18,6 +18,11 @@ interface DataFetchControlsProps {
   loadNextBatch: (offset: number, limit: number) => void;
   handleCjSeqDownload: () => void;
   hasRectangle: boolean;
+  isLoading: boolean;
+  lastFetchData?: {
+    totalFeatures: number;
+    currentOffset: number;
+  } | null;
 }
 
 const DataFetchControls = ({
@@ -26,29 +31,29 @@ const DataFetchControls = ({
   loadNextBatch,
   handleCjSeqDownload,
   hasRectangle,
+  isLoading,
+  lastFetchData,
 }: DataFetchControlsProps) => {
   const [fetchMode, setFetchMode] = useState<FetchMode>("bbox");
   const [featureLimit, setFeatureLimit] = useState(10);
-  const [currentOffset, setCurrentOffset] = useState(0);
+
+  // Control the enabled state of the "Load Next Batch" button
+  const hasMoreData =
+    lastFetchData && lastFetchData.currentOffset < lastFetchData.totalFeatures;
+
+  const canLoadMore = Boolean(lastFetchData) && hasMoreData && !isLoading;
 
   const handleFetchData = () => {
-    // Reset offset when fetching new data
-    setCurrentOffset(0);
-
     if (fetchMode === "bbox") {
       handleFetchFcb(0, featureLimit);
+    } else {
+      handleFetchFcbWithAttributeConditions([], 0, featureLimit);
     }
   };
 
   const handleLoadNextBatch = () => {
-    // Calculate the next offset
-    const nextOffset = currentOffset + featureLimit;
-
-    // Call the loadNextBatch function with the next offset
-    loadNextBatch(nextOffset, featureLimit);
-
-    // Update the current offset
-    setCurrentOffset(nextOffset);
+    if (!lastFetchData) return;
+    loadNextBatch(lastFetchData.currentOffset, featureLimit);
   };
 
   return (
@@ -100,9 +105,15 @@ const DataFetchControls = ({
               <Button
                 className="mb-px"
                 onClick={handleLoadNextBatch}
-                disabled={currentOffset === 0} // Disable until first fetch
+                disabled={!canLoadMore}
               >
                 Load Next Batch
+                {lastFetchData && (
+                  <span className="text-xs ml-1">
+                    ({lastFetchData.currentOffset}/{lastFetchData.totalFeatures}
+                    )
+                  </span>
+                )}
               </Button>
             </div>
 
@@ -110,7 +121,6 @@ const DataFetchControls = ({
             {fetchMode === "attribute" && (
               <AttributeConditionForm
                 handleFetchFcbWithAttributeConditions={(conditions) => {
-                  setCurrentOffset(0); // Reset offset
                   handleFetchFcbWithAttributeConditions(
                     conditions,
                     0,
@@ -124,9 +134,9 @@ const DataFetchControls = ({
             <Button
               className="w-full mt-2"
               onClick={handleFetchData}
-              disabled={fetchMode === "bbox" && !hasRectangle}
+              disabled={(fetchMode === "bbox" && !hasRectangle) || isLoading}
             >
-              Fetch FCB
+              {isLoading ? "Loading..." : "Fetch FCB"}
             </Button>
           </div>
         </div>
@@ -138,7 +148,7 @@ const DataFetchControls = ({
             variant="outline"
             className="w-full"
             onClick={handleCjSeqDownload}
-            disabled={!hasRectangle}
+            disabled={!hasRectangle || isLoading}
           >
             Download CJSeq
           </Button>

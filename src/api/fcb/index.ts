@@ -1,5 +1,9 @@
 import { type Condition } from "@/feature/attribute/hooks";
-import init, { HttpFcbReader, WasmAttrQuery } from "flatcitybuf";
+import init, {
+  AsyncFeatureIter,
+  HttpFcbReader,
+  WasmAttrQuery,
+} from "flatcitybuf";
 
 export type CjInfo = {
   features: unknown[];
@@ -8,20 +12,171 @@ export type CjInfo = {
     features_count: number;
   };
 };
+
 // Cache for WASM initialization
 let wasmInitialized = false;
 
 // Default value for maximum features to fetch
 const DEFAULT_LIMIT = 10;
 
+// Store readers and iterators for reuse
+type FcbQuery =
+  | {
+      type: "bbox";
+      bbox: number[];
+    }
+  | {
+      type: "attr";
+      conditions: Condition[];
+    };
+
+type ReaderState = {
+  reader: HttpFcbReader;
+  iterator: AsyncFeatureIter;
+  header: Map<string, unknown>;
+  totalCount: number;
+  currentPosition: number;
+  query: FcbQuery;
+};
+
+// Cache to store active reader states
+const readerStates: Map<string, ReaderState> = new Map();
+
+/**
+ * Initialize WASM
+ */
 const initWasm = async () => {
-  await init();
   if (!wasmInitialized) {
     await init();
     wasmInitialized = true;
   }
 };
 
+/**
+ * Create a cache key for a query
+ */
+const createCacheKey = (url: string, query: FcbQuery): string => {
+  if (query.type === "bbox") {
+    return `${url}-bbox-${query.bbox.join("-")}`;
+  } else {
+    // For attribute queries, create a deterministic string
+    const condStr = JSON.stringify(
+      query.conditions
+        .map((c) => `${c.attribute}-${c.operator}-${c.value}`)
+        .sort()
+    );
+    return `${url}-attr-${condStr}`;
+  }
+};
+
+/**
+ * Initialize or retrieve a reader state for a query
+ */
+const getReaderState = async (
+  url: string,
+  query: FcbQuery
+): Promise<ReaderState> => {
+  await initWasm();
+
+  const cacheKey = createCacheKey(url, query);
+
+  // Check if we already have a reader for this query
+  if (readerStates.has(cacheKey)) {
+    return readerStates.get(cacheKey)!;
+  }
+
+  // Create a new reader
+  const reader = await new HttpFcbReader(url);
+  const header = await reader.header();
+
+  // Count total features (this will consume an iterator)
+  const totalCount = header.feature_count;
+
+  // Create a fresh iterator for future use
+  let iterator;
+  if (query.type === "bbox") {
+    iterator = await reader.select_bbox(
+      query.bbox[0],
+      query.bbox[1],
+      query.bbox[2],
+      query.bbox[3]
+    );
+  } else {
+    const attrParams = query.conditions.map((cond) => {
+      return [cond.attribute, cond.operator, cond.value];
+    });
+    const attrQuery = new WasmAttrQuery(attrParams);
+    iterator = await reader.select_attr_query(attrQuery);
+  }
+
+  // Create and store the reader state
+  const state: ReaderState = {
+    reader,
+    iterator,
+    header,
+    totalCount,
+    currentPosition: 0,
+    query,
+  };
+
+  readerStates.set(cacheKey, state);
+  return state;
+};
+
+/**
+ * Fetch features using an existing iterator or create a new one
+ */
+const fetchFeatures = async (
+  url: string,
+  query: FcbQuery,
+  offset = 0,
+  limit = DEFAULT_LIMIT
+): Promise<{
+  features: unknown[];
+  header: Map<string, unknown>;
+  totalCount: number;
+  currentPosition: number;
+}> => {
+  // Get the reader state (creates a new one if needed)
+  const state = await getReaderState(url, query);
+
+  // Skip features until we reach the desired offset
+  while (state.currentPosition < offset) {
+    const feature = await state.iterator.next();
+    if (feature === undefined) {
+      break;
+    }
+    state.currentPosition++;
+  }
+
+  // Collect features up to the limit
+  const features = [];
+  let collected = 0;
+  while (collected < limit) {
+    const feature = await state.iterator.next();
+    if (feature === undefined) {
+      break;
+    }
+    features.push(feature);
+    collected++;
+    state.currentPosition++;
+  }
+
+  // Update the cache with the new position
+  const cacheKey = createCacheKey(url, query);
+  readerStates.set(cacheKey, state);
+
+  return {
+    features,
+    header: state.header,
+    totalCount: state.totalCount,
+    currentPosition: state.currentPosition,
+  };
+};
+
+/**
+ * Fetch FCB data using a bbox query
+ */
 export const fetchFcb = async (
   url: string,
   bbox: number[],
@@ -29,58 +184,20 @@ export const fetchFcb = async (
   limit = DEFAULT_LIMIT
 ) => {
   try {
-    await initWasm();
+    const query: FcbQuery = { type: "bbox", bbox };
 
-    const reader = await new HttpFcbReader(url);
+    console.log("query----", query);
+    const result = await fetchFeatures(url, query, offset, limit);
+    console.log("result----", result);
 
-    const header = await reader.header();
-    const bboxIter = await reader.select_bbox(
-      bbox[0],
-      bbox[1],
-      bbox[2],
-      bbox[3]
-    );
+    const headerJson = mapToJson(result.header);
+    console.log("headerJson----", headerJson);
 
-    const features = [];
-    let count = 0;
-    let skipped = 0;
-
-    // Skip features until we reach the offset
-    while (skipped < offset) {
-      const feature = await bboxIter.next();
-      if (feature === undefined) {
-        break;
-      }
-      skipped++;
-      count++;
-    }
-
-    // Collect features up to the limit
-    while (features.length < limit) {
-      const feature = await bboxIter.next();
-      if (feature === undefined) {
-        break;
-      }
-      features.push(feature);
-      count++;
-    }
-
-    // Count remaining features without loading them
-    while (true) {
-      const feature = await bboxIter.next();
-      if (feature === undefined) {
-        break;
-      }
-      count++;
-    }
-
-    const headerJson = mapToJson(header);
-
-    const cjInfo = {
+    const cjInfo: CjInfo = {
       cj: headerJson,
-      features,
+      features: result.features,
       meta: {
-        features_count: count,
+        features_count: result.totalCount,
       },
     };
 
@@ -91,6 +208,9 @@ export const fetchFcb = async (
   }
 };
 
+/**
+ * Fetch FCB data using attribute conditions
+ */
 export const fetchFcbWithAttributeConditions = async (
   url: string,
   conditions: Condition[],
@@ -98,61 +218,17 @@ export const fetchFcbWithAttributeConditions = async (
   limit = DEFAULT_LIMIT
 ) => {
   try {
-    await initWasm();
+    const query: FcbQuery = { type: "attr", conditions };
 
-    const query = conditions.map((cond) => {
-      return [cond.attribute, cond.operator, cond.value];
-    });
+    const result = await fetchFeatures(url, query, offset, limit);
 
-    console.log("conditions: ", conditions);
-    console.log("query: ", query);
-    const attrQuery = new WasmAttrQuery(query);
+    const headerJson = mapToJson(result.header);
 
-    const reader = await new HttpFcbReader(url);
-
-    const header = await reader.header();
-    const bboxIter = await reader.select_attr_query(attrQuery);
-
-    const features = [];
-    let count = 0;
-    let skipped = 0;
-
-    // Skip features until we reach the offset
-    while (skipped < offset) {
-      const feature = await bboxIter.next();
-      if (feature === undefined) {
-        break;
-      }
-      skipped++;
-      count++;
-    }
-
-    // Collect features up to the limit
-    while (features.length < limit) {
-      const feature = await bboxIter.next();
-      if (feature === undefined) {
-        break;
-      }
-      features.push(feature);
-      count++;
-    }
-
-    // Count remaining features without loading them
-    while (true) {
-      const feature = await bboxIter.next();
-      if (feature === undefined) {
-        break;
-      }
-      count++;
-    }
-
-    const headerJson = mapToJson(header);
-
-    const cjInfo = {
+    const cjInfo: CjInfo = {
       cj: headerJson,
-      features,
+      features: result.features,
       meta: {
-        features_count: count,
+        features_count: result.totalCount,
       },
     };
 
@@ -163,6 +239,9 @@ export const fetchFcbWithAttributeConditions = async (
   }
 };
 
+/**
+ * Download data as CJSeq format
+ */
 export const getCjSeq = async (
   url: string,
   bbox: [number, number, number, number]
@@ -203,6 +282,9 @@ export const getCjSeq = async (
   }
 };
 
+/**
+ * Convert Map to JSON object
+ */
 const mapToJson = (map: Map<string, unknown>) => {
   const obj: { [key: string]: unknown } = {};
   for (const [key, value] of map.entries()) {

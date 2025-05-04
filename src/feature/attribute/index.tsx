@@ -86,9 +86,9 @@ const AttributeConditionForm = ({
         <Button onClick={addCondition} size="sm" variant="outline">
           Add Condition
         </Button>
-        <Button onClick={handleFetchFcb} size="sm">
+        {/* <Button onClick={handleFetchFcb} size="sm">
           Apply Conditions
-        </Button>
+        </Button> */}
       </div>
       <div className="mt-2 p-2 bg-gray-50 rounded-sm border border-neutral-200">
         <div className="text-xs font-medium text-neutral-500">
