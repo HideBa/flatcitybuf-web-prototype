@@ -24,7 +24,7 @@ export const attributeConditionsAtom = atom<Condition[]>([
     value: "NL.IMBAG.Pand.0503100000012869",
   },
 ]);
-export const featureLimitAtom = atom<number>(10);
+export const featureLimitAtom = atom<number>(100);
 export const isLoadingAtom = atom<boolean>(false);
 export const lastFetchedDataAtom = atom<LastFetchedData | null>(null);
 

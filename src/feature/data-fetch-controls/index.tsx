@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Condition } from "../attribute/hooks";
 import AttributeConditionForm from "../attribute";
+import { useState, useEffect } from "react";
 import {
   fetchModeAtom,
   featureLimitAtom,
@@ -43,6 +44,8 @@ const DataFetchControls = ({
   const [hasMoreData] = useAtom(hasMoreDataAtom);
   const [lastFetchData] = useAtom(lastFetchedDataAtom);
   const [isLoading] = useAtom(isLoadingAtom);
+  const [width, setWidth] = useState(300);
+  const [isResizing, setIsResizing] = useState(false);
 
   const handleFetchData = () => {
     if (fetchMode === "bbox") {
@@ -62,8 +65,40 @@ const DataFetchControls = ({
     loadNextBatch(lastFetchData.currentOffset, featureLimit);
   };
 
+  // Handle mouse events for resizing
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const newWidth = Math.max(250, Math.min(600, e.clientX));
+      setWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizing]);
+
   return (
-    <div className="p-4 bg-white rounded-md shadow-sm border border-neutral-200">
+    <div
+      className="p-4 bg-white rounded-md shadow-sm border border-neutral-200 relative"
+      style={{ width: `${width}px` }}
+    >
+      {/* Resize handle */}
+      <div
+        className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-blue-200 transition-colors"
+        onMouseDown={() => setIsResizing(true)}
+      />
+
       {/* Main container with sections */}
       <div className="space-y-4">
         {/* Data Fetch Controls Section */}
@@ -100,11 +135,12 @@ const DataFetchControls = ({
                 <Input
                   id="featureLimit"
                   type="number"
-                  min={1}
-                  max={1000}
+                  min={10}
+                  max={10000}
                   value={featureLimit}
+                  step={100}
                   onChange={(e) =>
-                    setFeatureLimit(parseInt(e.target.value) || 10)
+                    setFeatureLimit(parseInt(e.target.value) || 100)
                   }
                 />
               </div>
