@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { useAtom } from "jotai";
+import { attributeConditionsAtom } from "@/store";
 
 export interface Condition {
   attribute: string;
@@ -8,24 +9,14 @@ export interface Condition {
 }
 
 type Props = {
-  initialConditions?: Condition[];
   handleFetchFcbWithAttributeConditions: (attrCond: Condition[]) => void;
 };
 
 export const useAttributeConditionForm = ({
-  initialConditions,
   handleFetchFcbWithAttributeConditions,
 }: Props) => {
-  const [conditions, setConditions] = useState<Condition[]>(
-    initialConditions ?? [
-      { attribute: "b3_h_dak_50p", operator: "Gt", value: 20.0 },
-      {
-        attribute: "identificatie",
-        operator: "Eq",
-        value: "NL.IMBAG.Pand.0503100000012869",
-      },
-    ]
-  );
+  // Use Jotai atom instead of local state
+  const [conditions, setConditions] = useAtom(attributeConditionsAtom);
 
   const updateCondition = (
     index: number,
@@ -38,8 +29,12 @@ export const useAttributeConditionForm = ({
         // Try to parse as number; if not a valid number, leave it as a string.
         const num = Number.parseFloat(value);
         newConditions[index][key] = Number.isNaN(num) ? value : num;
+      } else if (key === "operator") {
+        // Ensure the operator is one of the valid types
+        newConditions[index][key] = value as Condition["operator"];
       } else {
-        newConditions[index][key] = value as any;
+        // For attribute field
+        newConditions[index][key] = value;
       }
       return newConditions;
     });
@@ -94,9 +89,9 @@ export const useAttributeConditionForm = ({
     }
   }
 
-  const handleFetchFcb = useCallback(() => {
+  const handleFetchFcb = () => {
     handleFetchFcbWithAttributeConditions(conditions);
-  }, [conditions, handleFetchFcbWithAttributeConditions]);
+  };
 
   return {
     conditions,

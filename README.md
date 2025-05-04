@@ -1,59 +1,52 @@
-# FlatCityBuffer Viewer
+# FlatCityBuf Web Prototype
 
-A front-end prototype implementation for visualizing FlatCityBuffer data, which is a FlatBuffer encoding of CityJSON. This viewer demonstrates efficient spatial data retrieval using HTTP range requests and WebAssembly bindings.
-
-<video controls src="https://storage.googleapis.com/flatcitybuf/demo.mp4" title="Title"></video>
+A web application for visualizing and querying 3D building data using FlatCityBuf (FCB) format.
 
 ## Overview
 
-This project showcases:
-- Efficient spatial data retrieval using FlatCityBuffer's WASM bindings
-- HTTP range requests to fetch only the required data extent
-- Interactive map interface using CesiumJS
-- Real-time visualization of CityJSON data
-- Statistical analysis of building attributes
+This application uses:
 
-## Features
+- React with TypeScript
+- Cesium for 3D visualization (via resium)
+- Jotai for state management
+- Flatcitybuf for data processing
 
-- 🗺️ Interactive map with drawing tools for area selection
-- 📦 Efficient data loading using HTTP range requests
-- 📊 Statistical analysis of building attributes
-- 🔍 JSON viewer for detailed data inspection
-- 🏗️ Download CityJSONSeq file only for selected area
+## Recent Updates
 
-## Technology Stack
+### Global State Management with Jotai
 
-- React + TypeScript
-- Vite for build tooling
-- CesiumJS for map rendering
-- TailwindCSS + shadcn/ui for styling
-- [FlatCityBuffer WASM bindings](https://github.com/flatcitybuf/flatcitybuf-wasm)
-- proj4js for coordinate transformations
+The application has been refactored to use Jotai for global state management:
 
-## Getting Started
+1. **Centralized State**:
+   - All relevant state (rectangle, fetch mode, attribute conditions, etc.) are now managed in Jotai atoms
+   - Better state synchronization between components
+   - Cleaner code with fewer prop drilling
 
-### Prerequisites
+2. **Modular Code Structure**:
+   - Split into focused hooks: `useCesiumControls` and `useFcbData`
+   - Clear separation of concerns
 
-- Node.js (v18 or later)
-- npm (v9 or later)
-- Git
+3. **Fixed Issues**:
+   - Attribute conditions are properly passed to the FCB API
+   - Improved data fetching with proper pagination tracking
+   - Reusable components with consistent state access
 
-### Installation
+## Core Files
 
-1. Clone the repository with submodules:
-```bash
-git clone --recursive https://github.com/yourusername/flatcitybuffer-viewer.git
-cd flatcitybuffer-viewer
-```
+- `/src/store/index.ts` - Jotai atoms for global state
+- `/src/hooks/useCesiumControls.ts` - Cesium map interaction
+- `/src/hooks/useFcbData.ts` - FCB data fetching
+- `/src/feature/data-fetch-controls` - UI for data fetching
+- `/src/feature/attribute` - Attribute condition management
 
-2. Install dependencies:
-```bash
-npm install
-```
+## Usage
 
-3. Start the development server:
-```bash
-npm run dev
-```
+1. Draw a rectangle on the map
+2. Choose between BBox or Attribute Condition mode
+3. Set feature limit for pagination
+4. Use "Fetch FCB" to get data
+5. Use "Load Next Batch" for pagination
 
-The application will be available at `http://localhost:3000`
+## API Integration
+
+The app uses an optimized caching system for FCB requests to avoid redundant initializations and improve performance when fetching data.

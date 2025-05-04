@@ -1,12 +1,20 @@
-import { useState } from "react";
+import { useAtom } from "jotai";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Condition } from "../attribute/hooks";
 import AttributeConditionForm from "../attribute";
-
-type FetchMode = "bbox" | "attribute";
+import {
+  fetchModeAtom,
+  featureLimitAtom,
+  attributeConditionsAtom,
+  canFetchDataAtom,
+  hasMoreDataAtom,
+  lastFetchedDataAtom,
+  isLoadingAtom,
+  FetchMode,
+} from "@/store";
 
 interface DataFetchControlsProps {
   handleFetchFcb: (offset?: number, limit?: number) => void;
@@ -18,11 +26,6 @@ interface DataFetchControlsProps {
   loadNextBatch: (offset: number, limit: number) => void;
   handleCjSeqDownload: () => void;
   hasRectangle: boolean;
-  isLoading: boolean;
-  lastFetchData?: {
-    totalFeatures: number;
-    currentOffset: number;
-  } | null;
 }
 
 const DataFetchControls = ({
@@ -31,23 +34,26 @@ const DataFetchControls = ({
   loadNextBatch,
   handleCjSeqDownload,
   hasRectangle,
-  isLoading,
-  lastFetchData,
 }: DataFetchControlsProps) => {
-  const [fetchMode, setFetchMode] = useState<FetchMode>("bbox");
-  const [featureLimit, setFeatureLimit] = useState(10);
-
-  // Control the enabled state of the "Load Next Batch" button
-  const hasMoreData =
-    lastFetchData && lastFetchData.currentOffset < lastFetchData.totalFeatures;
-
-  const canLoadMore = Boolean(lastFetchData) && hasMoreData && !isLoading;
+  // Use Jotai atoms for state
+  const [fetchMode, setFetchMode] = useAtom(fetchModeAtom);
+  const [featureLimit, setFeatureLimit] = useAtom(featureLimitAtom);
+  const [attributeConditions] = useAtom(attributeConditionsAtom);
+  const [canFetchData] = useAtom(canFetchDataAtom);
+  const [hasMoreData] = useAtom(hasMoreDataAtom);
+  const [lastFetchData] = useAtom(lastFetchedDataAtom);
+  const [isLoading] = useAtom(isLoadingAtom);
 
   const handleFetchData = () => {
     if (fetchMode === "bbox") {
       handleFetchFcb(0, featureLimit);
     } else {
-      handleFetchFcbWithAttributeConditions([], 0, featureLimit);
+      // Use the actual attribute conditions instead of an empty array
+      handleFetchFcbWithAttributeConditions(
+        attributeConditions,
+        0,
+        featureLimit
+      );
     }
   };
 
@@ -105,7 +111,7 @@ const DataFetchControls = ({
               <Button
                 className="mb-px"
                 onClick={handleLoadNextBatch}
-                disabled={!canLoadMore}
+                disabled={!hasMoreData}
               >
                 Load Next Batch
                 {lastFetchData && (
@@ -134,7 +140,7 @@ const DataFetchControls = ({
             <Button
               className="w-full mt-2"
               onClick={handleFetchData}
-              disabled={(fetchMode === "bbox" && !hasRectangle) || isLoading}
+              disabled={!canFetchData}
             >
               {isLoading ? "Loading..." : "Fetch FCB"}
             </Button>

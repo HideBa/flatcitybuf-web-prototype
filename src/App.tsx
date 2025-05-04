@@ -12,14 +12,16 @@ import {
 import * as Cesium from "cesium";
 import { Allotment } from "allotment";
 import "allotment/dist/style.css";
+import { useAtom } from "jotai";
 
 import { Button } from "@/components/ui/button";
-import useHooks from "./hooks";
+import { useCesiumControls } from "./hooks/useCesiumControls";
+import { useFcbData } from "./hooks/useFcbData";
 
 import CjPreviewer from "./components/cjpreviewer";
-
 import { Spinner } from "./components/spinner";
 import DataFetchControls from "./feature/data-fetch-controls";
+import { isLoadingAtom, rectangleAtom } from "./store";
 
 function App() {
   const delftLatLng = Cesium.Cartesian3.fromDegrees(
@@ -39,26 +41,33 @@ function App() {
   // const fcbUrl = "https://storage.googleapis.com/flatcitybuf/delft_attr.fcb";
   // const fcbUrl = "https://storage.googleapis.com/flatcitybuf/3dbag_100k.fcb";
   // const fcbUrl = "https://storage.googleapis.com/flatcitybuf/3dbag_partial.fcb";
-  // const fcbUrl = "http://127.0.0.1:5501/src/rust/temp/3dbag_subset.fcb";
-  const fcbUrl = "http://127.0.0.1:5501/src/rust/temp/3dbag_partial.fcb";
+  const fcbUrl = "http://127.0.0.1:5501/src/rust/temp/3dbag_subset.fcb";
+  // const fcbUrl = "http://127.0.0.1:5501/src/rust/temp/3dbag_partial.fcb";
 
+  // Get the rectangle atom from store
+  const [rectangle] = useAtom(rectangleAtom);
+  const [isLoading] = useAtom(isLoadingAtom);
+
+  // Use custom hooks for cesium controls and FCB data
   const {
     viewerRef,
-    rectangle,
     isDrawing,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
-    result,
     toggleDrawMode,
     isDrawMode,
+    rectangleCallbackProperty,
+  } = useCesiumControls();
+
+  const {
+    result,
     handleFetchFcb,
     handleFetchFcbWithAttributeConditions,
     loadNextBatch,
     handleCjSeqDownload,
-    isLoading,
-    lastFetchedData,
-  } = useHooks({ fcbUrl });
+  } = useFcbData({ fcbUrl });
+
   return (
     <div className="h-screen w-screen">
       <Allotment vertical className="h-full">
@@ -84,15 +93,6 @@ function App() {
                 loadNextBatch={loadNextBatch}
                 handleCjSeqDownload={handleCjSeqDownload}
                 hasRectangle={!!rectangle}
-                isLoading={isLoading}
-                lastFetchData={
-                  lastFetchedData
-                    ? {
-                        totalFeatures: lastFetchedData.totalFeatures,
-                        currentOffset: lastFetchedData.currentOffset,
-                      }
-                    : null
-                }
               />
             </div>
             <Viewer
@@ -155,7 +155,9 @@ function App() {
               {rectangle && (
                 <Entity>
                   <RectangleGraphics
-                    coordinates={rectangle}
+                    coordinates={
+                      isDrawing ? rectangleCallbackProperty : rectangle
+                    }
                     material={
                       isDrawing
                         ? Cesium.Color.GRAY.withAlpha(0.4)

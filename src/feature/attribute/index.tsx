@@ -8,20 +8,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAtom } from "jotai";
+import { attributeConditionsAtom } from "@/store";
 
 const AttributeConditionForm = ({
   handleFetchFcbWithAttributeConditions,
 }: {
   handleFetchFcbWithAttributeConditions: (attrCond: Condition[]) => void;
 }) => {
-  const {
-    conditions,
-    updateCondition,
-    addCondition,
-    handleFetchFcb,
-    removeCondition,
-    getQuery,
-  } = useAttributeConditionForm({ handleFetchFcbWithAttributeConditions });
+  // Get conditions from Jotai atom
+  const [conditions] = useAtom(attributeConditionsAtom);
+
+  const { updateCondition, addCondition, removeCondition, getQuery } =
+    useAttributeConditionForm({ handleFetchFcbWithAttributeConditions });
 
   // The select options: display mathematical symbols as labels but use query tokens internally.
   const operatorOptions: { label: string; value: Condition["operator"] }[] = [
@@ -86,9 +85,6 @@ const AttributeConditionForm = ({
         <Button onClick={addCondition} size="sm" variant="outline">
           Add Condition
         </Button>
-        {/* <Button onClick={handleFetchFcb} size="sm">
-          Apply Conditions
-        </Button> */}
       </div>
       <div className="mt-2 p-2 bg-gray-50 rounded-sm border border-neutral-200">
         <div className="text-xs font-medium text-neutral-500">
