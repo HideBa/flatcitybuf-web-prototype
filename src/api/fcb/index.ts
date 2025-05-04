@@ -10,6 +10,7 @@ export type CjInfo = {
   cj: unknown;
   meta: {
     features_count: number;
+    fetched_features_count: number;
   };
 };
 
@@ -87,10 +88,12 @@ const getReaderState = async (
 
   // Create a new reader
   const reader = await new HttpFcbReader(url);
-  const header = await reader.header();
+  const header = await reader.cityjson();
+  const meta = await reader.meta();
+  console.log("meta----", meta);
 
   // Count total features (this will consume an iterator)
-  const totalCount = header.feature_count;
+  const totalCount = meta.featureCount;
 
   // Create a fresh iterator for future use
   let iterator;
@@ -186,18 +189,18 @@ export const fetchFcb = async (
   try {
     const query: FcbQuery = { type: "bbox", bbox };
 
-    console.log("query----", query);
     const result = await fetchFeatures(url, query, offset, limit);
-    console.log("result----", result);
 
     const headerJson = mapToJson(result.header);
-    console.log("headerJson----", headerJson);
+
+    console.log("result.totalCount----", result.totalCount);
 
     const cjInfo: CjInfo = {
       cj: headerJson,
       features: result.features,
       meta: {
         features_count: result.totalCount,
+        fetched_features_count: result.currentPosition,
       },
     };
 
@@ -224,11 +227,14 @@ export const fetchFcbWithAttributeConditions = async (
 
     const headerJson = mapToJson(result.header);
 
+    console.log("result.totalCount----", result.totalCount);
+
     const cjInfo: CjInfo = {
       cj: headerJson,
       features: result.features,
       meta: {
         features_count: result.totalCount,
+        fetched_features_count: result.currentPosition,
       },
     };
 
@@ -249,11 +255,10 @@ export const getCjSeq = async (
   try {
     await initWasm();
     const reader = await new HttpFcbReader(url);
-    const header = await reader.header();
-    const headerJson = mapToJson(header);
+    const header = await reader.cityjson();
 
     // Create JSONL content starting with header
-    let jsonlContent = JSON.stringify(headerJson) + "\n";
+    let jsonlContent = JSON.stringify(header) + "\n";
 
     const bboxIter = await reader.select_bbox(
       bbox[0],

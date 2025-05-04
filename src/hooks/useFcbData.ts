@@ -86,8 +86,8 @@ export const useFcbData = ({ fcbUrl }: Props) => {
       const resultWithStats: ExtendedCjInfo = {
         ...fetchResult,
         stats: {
-          num_total_features: 1115,
-          num_selected_features: fetchResult.meta.features_count,
+          num_total_features: result?.meta.features_count ?? 0,
+          num_selected_features: result?.features.length ?? 0,
         },
       };
 
@@ -95,12 +95,14 @@ export const useFcbData = ({ fcbUrl }: Props) => {
       setIsLoading(false);
     },
     [
-      fcbUrl,
-      rectangle,
-      rectToDegrees,
-      setIsLoading,
-      setLastFetchedData,
       featureLimit,
+      rectangle,
+      setIsLoading,
+      rectToDegrees,
+      fcbUrl,
+      setLastFetchedData,
+      result?.meta.features_count,
+      result?.features.length,
     ]
   );
 
@@ -131,8 +133,8 @@ export const useFcbData = ({ fcbUrl }: Props) => {
       const resultWithStats: ExtendedCjInfo = {
         ...fetchResult,
         stats: {
-          num_total_features: 1115,
-          num_selected_features: fetchResult.meta.features_count,
+          num_total_features: result?.meta.features_count ?? 0,
+          num_selected_features: result?.meta.fetched_features_count ?? 0,
         },
       };
 
@@ -140,11 +142,13 @@ export const useFcbData = ({ fcbUrl }: Props) => {
       setIsLoading(false);
     },
     [
-      fcbUrl,
-      setIsLoading,
-      setLastFetchedData,
       attributeConditions,
       featureLimit,
+      setIsLoading,
+      fcbUrl,
+      setLastFetchedData,
+      result?.meta.features_count,
+      result?.meta.fetched_features_count,
     ]
   );
 
@@ -172,8 +176,8 @@ export const useFcbData = ({ fcbUrl }: Props) => {
         const resultWithStats: ExtendedCjInfo = {
           ...fetchResult,
           stats: {
-            num_total_features: 1115,
-            num_selected_features: lastFetchedData.totalFeatures,
+            num_total_features: fetchResult.meta.features_count,
+            num_selected_features: fetchResult.meta.fetched_features_count,
           },
         };
         setResult(resultWithStats);
@@ -198,8 +202,8 @@ export const useFcbData = ({ fcbUrl }: Props) => {
         const resultWithStats: ExtendedCjInfo = {
           ...fetchResult,
           stats: {
-            num_total_features: 1115,
-            num_selected_features: lastFetchedData.totalFeatures,
+            num_total_features: result?.meta.features_count ?? 0,
+            num_selected_features: result?.meta.fetched_features_count ?? 0,
           },
         };
         setResult(resultWithStats);
@@ -207,7 +211,15 @@ export const useFcbData = ({ fcbUrl }: Props) => {
 
       setIsLoading(false);
     },
-    [fcbUrl, lastFetchedData, setIsLoading, setLastFetchedData, featureLimit]
+    [
+      featureLimit,
+      lastFetchedData,
+      setIsLoading,
+      fcbUrl,
+      setLastFetchedData,
+      result?.meta.features_count,
+      result?.meta.fetched_features_count,
+    ]
   );
 
   const handleCjSeqDownload = useCallback(async () => {

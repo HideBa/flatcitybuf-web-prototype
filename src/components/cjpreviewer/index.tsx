@@ -21,7 +21,7 @@ type CjPreviewerProps = {
 };
 
 const CjPreviewer = ({ result }: CjPreviewerProps) => {
-  const { cj, features } = result ?? {};
+  const { cj, features, stats } = result ?? {};
   return (
     <div className="h-full bg-background p-4">
       <h2 className="text-lg font-semibold mb-4">CityJSONSeq Overview</h2>
@@ -60,13 +60,13 @@ const CjPreviewer = ({ result }: CjPreviewerProps) => {
                         <tr className="border-b">
                           <td className="p-3">Total Features</td>
                           <td className="p-3">
-                            {result?.stats.num_total_features ?? 0}
+                            {stats?.num_total_features ?? 0}
                           </td>
                         </tr>
                         <tr className="border-b">
                           <td className="p-3">Selected Features</td>
                           <td className="p-3">
-                            {result?.stats.num_selected_features ?? 0}
+                            {stats?.num_selected_features ?? 0}
                           </td>
                         </tr>
                         {/* <tr className="border-b">

@@ -168,8 +168,8 @@ const useHooks = ({ fcbUrl }: Props) => {
         cj: fetchResult.cj,
         features: fetchResult.features,
         stats: {
-          num_total_features: 1115,
-          num_selected_features: fetchResult.meta.features_count,
+          num_total_features: fetchResult.meta.features_count,
+          num_selected_features: fetchResult.meta.fetched_features_count,
         },
       };
 
@@ -203,8 +203,8 @@ const useHooks = ({ fcbUrl }: Props) => {
         cj: fetchResult.cj,
         features: fetchResult.features,
         stats: {
-          num_total_features: 1115,
-          num_selected_features: fetchResult.meta.features_count,
+          num_total_features: fetchResult.meta.features_count,
+          num_selected_features: fetchResult.meta.fetched_features_count,
         },
       };
 
@@ -239,8 +239,8 @@ const useHooks = ({ fcbUrl }: Props) => {
           cj: fetchResult.cj,
           features: fetchResult.features,
           stats: {
-            num_total_features: 1115,
-            num_selected_features: lastFetchedData.totalFeatures,
+            num_total_features: fetchResult.meta.features_count,
+            num_selected_features: fetchResult.meta.fetched_features_count,
           },
         };
         setResult(resultWithStats);
@@ -266,8 +266,8 @@ const useHooks = ({ fcbUrl }: Props) => {
           cj: fetchResult.cj,
           features: fetchResult.features,
           stats: {
-            num_total_features: 1115,
-            num_selected_features: lastFetchedData.totalFeatures,
+            num_total_features: fetchResult.meta.features_count,
+            num_selected_features: fetchResult.meta.fetched_features_count,
           },
         };
         setResult(resultWithStats);
