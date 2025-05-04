@@ -11,7 +11,8 @@ export type CjInfo = {
 // Cache for WASM initialization
 let wasmInitialized = false;
 
-const MAX_FEATURES = 10;
+// Default value for maximum features to fetch
+const DEFAULT_LIMIT = 10;
 
 const initWasm = async () => {
   await init();
@@ -23,7 +24,9 @@ const initWasm = async () => {
 
 export const fetchFcb = async (
   url: string,
-  bbox: [number, number, number, number]
+  bbox: number[],
+  offset = 0,
+  limit = DEFAULT_LIMIT
 ) => {
   try {
     await initWasm();
@@ -40,13 +43,33 @@ export const fetchFcb = async (
 
     const features = [];
     let count = 0;
-    while (true) {
+    let skipped = 0;
+
+    // Skip features until we reach the offset
+    while (skipped < offset) {
       const feature = await bboxIter.next();
       if (feature === undefined) {
         break;
       }
-      if (count < MAX_FEATURES) {
-        features.push(feature);
+      skipped++;
+      count++;
+    }
+
+    // Collect features up to the limit
+    while (features.length < limit) {
+      const feature = await bboxIter.next();
+      if (feature === undefined) {
+        break;
+      }
+      features.push(feature);
+      count++;
+    }
+
+    // Count remaining features without loading them
+    while (true) {
+      const feature = await bboxIter.next();
+      if (feature === undefined) {
+        break;
       }
       count++;
     }
@@ -67,9 +90,12 @@ export const fetchFcb = async (
     throw error;
   }
 };
+
 export const fetchFcbWithAttributeConditions = async (
   url: string,
-  conditions: Condition[]
+  conditions: Condition[],
+  offset = 0,
+  limit = DEFAULT_LIMIT
 ) => {
   try {
     await initWasm();
@@ -89,13 +115,33 @@ export const fetchFcbWithAttributeConditions = async (
 
     const features = [];
     let count = 0;
-    while (true) {
+    let skipped = 0;
+
+    // Skip features until we reach the offset
+    while (skipped < offset) {
       const feature = await bboxIter.next();
       if (feature === undefined) {
         break;
       }
-      if (count < MAX_FEATURES) {
-        features.push(feature);
+      skipped++;
+      count++;
+    }
+
+    // Collect features up to the limit
+    while (features.length < limit) {
+      const feature = await bboxIter.next();
+      if (feature === undefined) {
+        break;
+      }
+      features.push(feature);
+      count++;
+    }
+
+    // Count remaining features without loading them
+    while (true) {
+      const feature = await bboxIter.next();
+      if (feature === undefined) {
+        break;
       }
       count++;
     }

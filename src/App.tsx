@@ -19,7 +19,7 @@ import useHooks from "./hooks";
 import CjPreviewer from "./components/cjpreviewer";
 
 import { Spinner } from "./components/spinner";
-import AttributeConditionForm from "./feature/attribute";
+import DataFetchControls from "./feature/data-fetch-controls";
 
 function App() {
   const delftLatLng = Cesium.Cartesian3.fromDegrees(
@@ -38,7 +38,9 @@ function App() {
 
   // const fcbUrl = "https://storage.googleapis.com/flatcitybuf/delft_attr.fcb";
   // const fcbUrl = "https://storage.googleapis.com/flatcitybuf/3dbag_100k.fcb";
-  const fcbUrl = "https://storage.googleapis.com/flatcitybuf/3dbag_partial.fcb";
+  // const fcbUrl = "https://storage.googleapis.com/flatcitybuf/3dbag_partial.fcb";
+  const fcbUrl = "http://127.0.0.1:5501/src/rust/temp/3dbag_subset.fcb";
+
   const {
     viewerRef,
     rectangle,
@@ -51,6 +53,7 @@ function App() {
     isDrawMode,
     handleFetchFcb,
     handleFetchFcbWithAttributeConditions,
+    loadNextBatch,
     handleCjSeqDownload,
     isLoading,
   } = useHooks({ fcbUrl });
@@ -60,24 +63,26 @@ function App() {
         {/* Map Container */}
         <Allotment.Pane minSize={200} preferredSize={300}>
           <div className="relative h-full">
-            <div className="absolute top-4 left-4 z-10 flex gap-2">
-              <Button
-                onClick={toggleDrawMode}
-                variant={isDrawMode ? "secondary" : "default"}
-              >
-                Draw Rectangle ({isDrawMode ? "on" : "off"})
-              </Button>
-              <Button onClick={handleFetchFcb} disabled={!rectangle}>
-                Fetch FCB within rectangle
-              </Button>
-              <AttributeConditionForm
+            <div className="absolute top-4 left-4 z-10 flex flex-col gap-2 w-80">
+              <div className="bg-white rounded-md shadow-sm border border-neutral-200 p-2">
+                <Button
+                  onClick={toggleDrawMode}
+                  variant={isDrawMode ? "secondary" : "default"}
+                  className="w-full"
+                >
+                  Draw Rectangle ({isDrawMode ? "on" : "off"})
+                </Button>
+              </div>
+
+              <DataFetchControls
+                handleFetchFcb={handleFetchFcb}
                 handleFetchFcbWithAttributeConditions={
                   handleFetchFcbWithAttributeConditions
                 }
+                loadNextBatch={loadNextBatch}
+                handleCjSeqDownload={handleCjSeqDownload}
+                hasRectangle={!!rectangle}
               />
-              <Button onClick={handleCjSeqDownload} disabled={!rectangle}>
-                Download CJSeq
-              </Button>
             </div>
             <Viewer
               ref={viewerRef}

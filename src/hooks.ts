@@ -15,14 +15,15 @@ proj4.defs([
   ],
 ]);
 
-type EventActionParams =
-  | {
-      position: Cartesian2;
-    }
-  | {
-      startPosition: Cartesian2;
-      endPosition: Cartesian2;
-    };
+// Additional helper types
+type MouseEvent = {
+  position?: Cartesian2;
+  startPosition?: Cartesian2;
+  endPosition?: Cartesian2;
+  [key: string]: any;
+};
+
+type RectToDegrees = (rect: Cesium.Rectangle) => [number[], number[]];
 
 export type Props = {
   fcbUrl: string;
@@ -53,6 +54,14 @@ const useHooks = ({ fcbUrl }: Props) => {
   }, [firstPoint, currentPoint]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Store the last fetched data for use with pagination
+  const [lastFetchedData, setLastFetchedData] = useState<{
+    type: "bbox" | "attribute";
+    bbox?: number[];
+    attributes?: Condition[];
+    totalFeatures: number;
+  } | null>(null);
+
   const toggleDrawMode = useCallback(() => {
     setIsDrawMode((prev) => {
       if (prev) {
@@ -65,13 +74,15 @@ const useHooks = ({ fcbUrl }: Props) => {
   }, [setIsDrawMode]);
 
   const handleMouseDown = useCallback(
-    (event: EventActionParams) => {
+    (event: MouseEvent) => {
       if (!isDrawMode || !viewerRef.current?.cesiumElement) return;
-      if (!("position" in event)) return;
+      // Use position if available
+      const position = event.position || event.startPosition;
+      if (!position) return;
 
       setIsDrawing(true);
       const viewer = viewerRef.current.cesiumElement;
-      const cartesian = viewer.scene.pickPosition(event.position);
+      const cartesian = viewer.scene.pickPosition(position);
       if (cartesian) {
         setFirstPoint(cartesian);
       }
@@ -80,194 +91,116 @@ const useHooks = ({ fcbUrl }: Props) => {
   );
 
   const handleMouseMove = useCallback(
-    (event: EventActionParams) => {
-      if (!isDrawMode || !firstPoint || !viewerRef.current?.cesiumElement)
+    (event: MouseEvent) => {
+      if (!isDrawMode || !isDrawing || !viewerRef.current?.cesiumElement)
         return;
-      if (!("endPosition" in event)) return;
+      // Use endPosition if available, fallback to position
+      const position = event.endPosition || event.position;
+      if (!position) return;
+
       const viewer = viewerRef.current.cesiumElement;
-      const cartesian = viewer.scene.pickPosition(event.endPosition);
+      const cartesian = viewer.scene.pickPosition(position);
       if (cartesian) {
         setCurrentPoint(cartesian);
       }
     },
-    [isDrawMode, firstPoint]
+    [isDrawMode, isDrawing]
   );
 
-  const handleMouseUp = useCallback(
-    (event: EventActionParams) => {
-      if (!isDrawMode || !firstPoint || !viewerRef.current?.cesiumElement)
-        return;
-      if (!("position" in event)) return;
-      const viewer = viewerRef.current.cesiumElement;
-      const cartesian = viewer.scene.pickPosition(event.position);
-      setRectangle(() => {
-        const carto1 = Cesium.Cartographic.fromCartesian(firstPoint);
-        const carto2 = Cesium.Cartographic.fromCartesian(cartesian);
+  const handleMouseUp = useCallback(() => {
+    if (!isDrawMode || !isDrawing) return;
 
-        return Cesium.Rectangle.fromCartographicArray([
-          new Cesium.Cartographic(carto1.longitude, carto1.latitude),
-          new Cesium.Cartographic(carto2.longitude, carto2.latitude),
-        ]);
-      });
-      if (cartesian) {
-        setCurrentPoint(cartesian);
-        setIsDrawing(false);
-        setFirstPoint(null);
-      }
-    },
-    [isDrawMode, firstPoint]
-  );
+    setIsDrawing(false);
+    if (firstPoint && currentPoint) {
+      const carto1 = Cesium.Cartographic.fromCartesian(firstPoint);
+      const carto2 = Cesium.Cartographic.fromCartesian(currentPoint);
 
-  const rectToDegrees = useCallback((rect: Cesium.Rectangle) => {
+      const rectangle = Cesium.Rectangle.fromCartographicArray([
+        new Cesium.Cartographic(carto1.longitude, carto1.latitude),
+        new Cesium.Cartographic(carto2.longitude, carto2.latitude),
+      ]);
+
+      setRectangle(rectangle);
+    }
+  }, [firstPoint, currentPoint, isDrawMode, isDrawing]);
+
+  const rectToDegrees = useCallback<RectToDegrees>((rect) => {
+    const west = Cesium.Math.toDegrees(rect.west);
+    const south = Cesium.Math.toDegrees(rect.south);
+    const east = Cesium.Math.toDegrees(rect.east);
+    const north = Cesium.Math.toDegrees(rect.north);
+
     return [
-      [Cesium.Math.toDegrees(rect.west), Cesium.Math.toDegrees(rect.south)],
-      [Cesium.Math.toDegrees(rect.east), Cesium.Math.toDegrees(rect.north)],
+      [west, south],
+      [east, north],
     ];
   }, []);
 
-  // const calculateStats = (features: any[]) => {
-  //   const roofHeights: number[] = [];
-  //   let greenHouseCount = 0;
-  //   let ahn3Ahn4ChangeCount = 0;
-  //   let unsuccessCount = 0;
-  //   let volumeSum = 0;
-  //   let volumeCount = 0;
-  //   let yearSum = 0;
-  //   let yearCount = 0;
+  const handleFetchFcb = useCallback(
+    async (offset = 0, limit = 10) => {
+      if (!rectangle) return;
+      setIsLoading(true);
+      //convert lat lng to dutch coordinate system
+      const [min, max] = rectToDegrees(rectangle);
 
-  //   let count = 0;
-  //   features.forEach((feature) => {
-  //     count++;
-  //     if (count > 2) return;
-  //     const cityObjects =
-  //       feature.CityObjects instanceof Map
-  //         ? Array.from(feature.CityObjects.values())
-  //         : [];
+      const minPoint = proj4("EPSG:4326", "EPSG:28992", min);
+      const maxPoint = proj4("EPSG:4326", "EPSG:28992", max);
+      console.log("minPoint: ", minPoint);
+      console.log("maxPoint: ", maxPoint);
 
-  //     cityObjects.forEach((cityObject: any) => {
-  //       console.log("cityObject", cityObject);
-  //       // Convert Map to object if needed
-  //       const attributes =
-  //         cityObject.attributes instanceof Map
-  //           ? Object.fromEntries(cityObject.attributes.values())
-  //           : cityObject.attributes || {};
+      const tempminPoint = [79528.94099999999, 426199.813];
+      const tempmaxPoint = [101674.299, 452784.517];
+      const minPoint_latlng = proj4("EPSG:28992", "EPSG:4326", tempminPoint);
+      const maxPoint_latlng = proj4("EPSG:28992", "EPSG:4326", tempmaxPoint);
+      console.log("minPoint_latlng: ", minPoint_latlng);
+      console.log("maxPoint_latlng: ", maxPoint_latlng);
 
-  //       console.log("attributes", attributes);
+      const bbox = [minPoint[0], minPoint[1], maxPoint[0], maxPoint[1]];
 
-  //       // Roof height
-  //       if ("b3_h_dak_50p" in attributes && attributes.b3_h_dak_50p !== null) {
-  //         roofHeights.push(Number(attributes.b3_h_dak_50p));
-  //       }
+      const fetchResult = await fetchFcb(fcbUrl, bbox, offset, limit);
 
-  //       // Green house/warehouse
-  //       if (
-  //         "b3_kas_warenhuis" in attributes &&
-  //         Number(attributes.b3_kas_warenhuis) === 1
-  //       ) {
-  //         greenHouseCount++;
-  //       }
+      // Save data for pagination
+      setLastFetchedData({
+        type: "bbox",
+        bbox,
+        totalFeatures: fetchResult.meta.features_count,
+      });
 
-  //       // AHN3/AHN4 change
-  //       if (
-  //         "b3_mutatie_ahn3_ahn4" in attributes &&
-  //         Number(attributes.b3_mutatie_ahn3_ahn4) === 1
-  //       ) {
-  //         ahn3Ahn4ChangeCount++;
-  //       }
-
-  //       // Unsuccessful cases
-  //       if ("b3_succes" in attributes && Number(attributes.b3_succes) === 0) {
-  //         unsuccessCount++;
-  //       }
-
-  //       // Volume LOD2
-  //       if (
-  //         "b3_volume_lod22" in attributes &&
-  //         attributes.b3_volume_lod22 !== null
-  //       ) {
-  //         volumeSum += Number(attributes.b3_volume_lod22);
-  //         volumeCount++;
-  //       }
-
-  //       // Construction year
-  //       if (
-  //         "oorspronkelijkbouwjaar" in attributes &&
-  //         attributes.oorspronkelijkbouwjaar !== null
-  //       ) {
-  //         yearSum += Number(attributes.oorspronkelijkbouwjaar);
-  //         yearCount++;
-  //       }
-  //     });
-  //   });
-
-  //   // Calculate statistics
-  //   return {
-  //     num_total_features: 1115,
-  //     num_selected_features: features.length,
-  //     median_roof_height:
-  //       roofHeights.length > 0
-  //         ? roofHeights.sort((a, b) => a - b)[
-  //             Math.floor(roofHeights.length / 2)
-  //           ]
-  //         : undefined,
-  //     ratio_of_green_house_warehouse:
-  //       features.length > 0 ? greenHouseCount / features.length : undefined,
-  //     num_ahn3_ahn4_change: ahn3Ahn4ChangeCount,
-  //     unsuccess_num: unsuccessCount,
-  //     ave_volume_lod2: volumeCount > 0 ? volumeSum / volumeCount : undefined,
-  //     ave_construction_year: yearCount > 0 ? yearSum / yearCount : undefined,
-  //   };
-  // };
-
-  const handleFetchFcb = useCallback(async () => {
-    if (!rectangle) return;
-    setIsLoading(true);
-    //convert lat lng to dutch coordinate system
-    const [min, max] = rectToDegrees(rectangle);
-
-    const minPoint = proj4("EPSG:4326", "EPSG:28992", min);
-    const maxPoint = proj4("EPSG:4326", "EPSG:28992", max);
-    console.log("minPoint: ", minPoint);
-    console.log("maxPoint: ", maxPoint);
-
-    const tempminPoint = [79528.94099999999, 426199.813];
-    const tempmaxPoint = [101674.299, 452784.517];
-    const minPoint_latlng = proj4("EPSG:28992", "EPSG:4326", tempminPoint);
-    const maxPoint_latlng = proj4("EPSG:28992", "EPSG:4326", tempmaxPoint);
-    console.log("minPoint_latlng: ", minPoint_latlng);
-    console.log("maxPoint_latlng: ", maxPoint_latlng);
-
-    const fetchResult = await fetchFcb(fcbUrl, [
-      minPoint[0],
-      minPoint[1],
-      maxPoint[0],
-      maxPoint[1],
-    ]);
-    const resultWithStats = {
-      cj: fetchResult.cj,
-      features: fetchResult.features.slice(0, 10),
-      stats: {
-        num_total_features: 1115,
-        num_selected_features: fetchResult.meta.features_count,
-      },
-      // stats: calculateStats(fetchResult.features),
-    };
-    setResult(resultWithStats);
-    setIsLoading(false);
-  }, [fcbUrl, rectToDegrees, rectangle]);
+      const resultWithStats = {
+        cj: fetchResult.cj,
+        features: fetchResult.features,
+        stats: {
+          num_total_features: 1115,
+          num_selected_features: fetchResult.meta.features_count,
+        },
+      };
+      setResult(resultWithStats);
+      setIsLoading(false);
+    },
+    [fcbUrl, rectToDegrees, rectangle]
+  );
 
   const handleFetchFcbWithAttributeConditions = useCallback(
-    async (attrCond: Condition[]) => {
+    async (attrCond: Condition[], offset = 0, limit = 10) => {
       setIsLoading(true);
 
       const fetchResult = await fetchFcbWithAttributeConditions(
         fcbUrl,
-        attrCond
+        attrCond,
+        offset,
+        limit
       );
+
+      // Save data for pagination
+      setLastFetchedData({
+        type: "attribute",
+        attributes: attrCond,
+        totalFeatures: fetchResult.meta.features_count,
+      });
 
       const resultWithStats = {
         cj: fetchResult.cj,
-        features: fetchResult.features.slice(0, 10),
+        features: fetchResult.features,
         stats: {
           num_total_features: 1115,
           num_selected_features: fetchResult.meta.features_count,
@@ -278,6 +211,57 @@ const useHooks = ({ fcbUrl }: Props) => {
     },
     [fcbUrl]
   );
+
+  const loadNextBatch = useCallback(
+    async (offset: number, limit: number) => {
+      if (!lastFetchedData) return;
+
+      setIsLoading(true);
+
+      if (lastFetchedData.type === "bbox" && lastFetchedData.bbox) {
+        const fetchResult = await fetchFcb(
+          fcbUrl,
+          lastFetchedData.bbox,
+          offset,
+          limit
+        );
+
+        const resultWithStats = {
+          cj: fetchResult.cj,
+          features: fetchResult.features,
+          stats: {
+            num_total_features: 1115,
+            num_selected_features: lastFetchedData.totalFeatures,
+          },
+        };
+        setResult(resultWithStats);
+      } else if (
+        lastFetchedData.type === "attribute" &&
+        lastFetchedData.attributes
+      ) {
+        const fetchResult = await fetchFcbWithAttributeConditions(
+          fcbUrl,
+          lastFetchedData.attributes,
+          offset,
+          limit
+        );
+
+        const resultWithStats = {
+          cj: fetchResult.cj,
+          features: fetchResult.features,
+          stats: {
+            num_total_features: 1115,
+            num_selected_features: lastFetchedData.totalFeatures,
+          },
+        };
+        setResult(resultWithStats);
+      }
+
+      setIsLoading(false);
+    },
+    [fcbUrl, lastFetchedData]
+  );
+
   const handleCjSeqDownload = useCallback(async () => {
     if (!rectangle) return;
     const [min, max] = rectToDegrees(rectangle);
@@ -305,6 +289,7 @@ const useHooks = ({ fcbUrl }: Props) => {
     isDrawMode,
     handleFetchFcb,
     handleFetchFcbWithAttributeConditions,
+    loadNextBatch,
     result,
     handleCjSeqDownload,
     isLoading,
