@@ -1,12 +1,6 @@
 import { useAtom } from "jotai";
 import { attributeConditionsAtom } from "@/store";
-
-export interface Condition {
-  attribute: string;
-  operator: "Gt" | "Ge" | "Eq" | "Lt" | "Le";
-  // This can be a number or string; if the user enters a number the hook will try to convert it.
-  value: string | number;
-}
+import { type Condition } from "@/api/fcb";
 
 type Props = {
   handleFetchFcbWithAttributeConditions: (attrCond: Condition[]) => void;

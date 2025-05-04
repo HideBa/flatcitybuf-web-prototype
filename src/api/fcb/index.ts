@@ -1,4 +1,4 @@
-import { type Condition } from "@/feature/attribute/hooks";
+import { type Condition } from "../fcb";
 import init, {
   AsyncFeatureIter,
   HttpFcbReader,
@@ -90,7 +90,6 @@ const getReaderState = async (
   const reader = await new HttpFcbReader(url);
   const header = await reader.cityjson();
   const meta = await reader.meta();
-  console.log("meta----", meta);
 
   // Count total features (this will consume an iterator)
   const totalCount = meta.featureCount;

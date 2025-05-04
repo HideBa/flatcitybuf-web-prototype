@@ -1,6 +1,7 @@
 import { atom } from "jotai";
-import { type Condition } from "@/feature/attribute/hooks";
+import { type Condition } from "@/api/fcb";
 import * as Cesium from "cesium";
+import { type Column, type FcbMeta } from "@/api/fcb";
 
 // Types
 export type FetchMode = "bbox" | "attribute";
@@ -27,6 +28,7 @@ export const attributeConditionsAtom = atom<Condition[]>([
 export const featureLimitAtom = atom<number>(100);
 export const isLoadingAtom = atom<boolean>(false);
 export const lastFetchedDataAtom = atom<LastFetchedData | null>(null);
+export const fcbMetaAtom = atom<FcbMeta | null>(null);
 
 // Derived atoms
 export const canFetchDataAtom = atom((get) => {
@@ -45,4 +47,12 @@ export const hasMoreDataAtom = atom((get) => {
     ? lastFetchedData.currentOffset < lastFetchedData.totalFeatures &&
         !isLoading
     : false;
+});
+
+// Indexable columns atom
+export const indexableColumnsAtom = atom<Column[]>((get) => {
+  const fcbMeta = get(fcbMetaAtom);
+  if (!fcbMeta) return [];
+
+  return fcbMeta.columns.filter((column) => column.attrIndex === true);
 });

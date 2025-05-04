@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useAtom } from "jotai";
 import * as Cesium from "cesium";
 import proj4 from "proj4";
@@ -6,16 +6,18 @@ import {
   fetchFcb,
   fetchFcbWithAttributeConditions,
   getCjSeq,
-  type CjInfo,
-} from "../api/fcb";
+  fetchFcbMeta,
+  type Condition,
+} from "@/api/fcb";
 import {
   attributeConditionsAtom,
+  fcbMetaAtom,
+  fetchModeAtom,
   featureLimitAtom,
   isLoadingAtom,
   lastFetchedDataAtom,
   rectangleAtom,
 } from "@/store";
-import { Condition } from "@/feature/attribute/hooks";
 
 // Define coordinate systems
 proj4.defs([
@@ -33,7 +35,14 @@ type Props = {
 type RectToDegrees = (rect: Cesium.Rectangle) => [number[], number[]];
 
 // Extended CjInfo with stats for UI display
-interface ExtendedCjInfo extends CjInfo {
+interface ExtendedCjInfo {
+  type?: string;
+  features: unknown[];
+  cj?: unknown;
+  meta: {
+    features_count: number;
+    fetched_features_count: number;
+  };
   stats: {
     num_total_features: number;
     num_selected_features: number;
@@ -46,6 +55,8 @@ export const useFcbData = ({ fcbUrl }: Props) => {
   const [lastFetchedData, setLastFetchedData] = useAtom(lastFetchedDataAtom);
   const [featureLimit] = useAtom(featureLimitAtom);
   const [attributeConditions] = useAtom(attributeConditionsAtom);
+  const [fetchMode] = useAtom(fetchModeAtom);
+  const [, setFcbMeta] = useAtom(fcbMetaAtom);
   const [result, setResult] = useState<ExtendedCjInfo | null>(null);
 
   const rectToDegrees = useCallback<RectToDegrees>((rect) => {
@@ -237,6 +248,25 @@ export const useFcbData = ({ fcbUrl }: Props) => {
     const url = URL.createObjectURL(cjSeq);
     window.open(url, "_blank");
   }, [fcbUrl, rectangle, rectToDegrees]);
+
+  // Effect to fetch metadata when fetchMode changes to 'attribute'
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      if (fetchMode === "attribute") {
+        try {
+          setIsLoading(true);
+          const meta = await fetchFcbMeta(fcbUrl);
+          setFcbMeta(meta);
+        } catch (error) {
+          console.error("Failed to fetch FCB metadata:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchMetadata();
+  }, [fetchMode, fcbUrl, setFcbMeta, setIsLoading]);
 
   return {
     result,

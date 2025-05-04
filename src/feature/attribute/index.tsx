@@ -1,4 +1,4 @@
-import { useAttributeConditionForm, type Condition } from "./hooks";
+import { useAttributeConditionForm } from "./hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,7 +9,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAtom } from "jotai";
-import { attributeConditionsAtom } from "@/store";
+import { attributeConditionsAtom, indexableColumnsAtom } from "@/store";
+import { type Condition } from "@/api/fcb";
 
 const AttributeConditionForm = ({
   handleFetchFcbWithAttributeConditions,
@@ -18,6 +19,8 @@ const AttributeConditionForm = ({
 }) => {
   // Get conditions from Jotai atom
   const [conditions] = useAtom(attributeConditionsAtom);
+  // Get indexable columns from the derived atom
+  const [indexableColumns] = useAtom(indexableColumnsAtom);
 
   const { updateCondition, addCondition, removeCondition, getQuery } =
     useAttributeConditionForm({ handleFetchFcbWithAttributeConditions });
@@ -36,16 +39,22 @@ const AttributeConditionForm = ({
       <div className="space-y-2">
         {conditions.map((cond, index) => (
           <div key={index} className="flex items-center gap-2">
-            {/* Attribute Input */}
-            <Input
-              type="text"
+            {/* Attribute Select - replaces the Input */}
+            <Select
               value={cond.attribute}
-              placeholder="Attribute"
-              onChange={(e) =>
-                updateCondition(index, "attribute", e.target.value)
-              }
-              className="w-full"
-            />
+              onValueChange={(val) => updateCondition(index, "attribute", val)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select attribute" />
+              </SelectTrigger>
+              <SelectContent>
+                {indexableColumns.map((column) => (
+                  <SelectItem key={column.name} value={column.name}>
+                    {column.title || column.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {/* Operator Select */}
             <Select
               value={cond.operator}

@@ -1,11 +1,12 @@
 import { useAtom } from "jotai";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Condition } from "../attribute/hooks";
+import { type Condition } from "@/api/fcb";
 import AttributeConditionForm from "../attribute";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   fetchModeAtom,
   featureLimitAtom,
@@ -15,6 +16,7 @@ import {
   lastFetchedDataAtom,
   isLoadingAtom,
   FetchMode,
+  indexableColumnsAtom,
 } from "@/store";
 
 interface DataFetchControlsProps {
@@ -46,6 +48,7 @@ const DataFetchControls = ({
   const [isLoading] = useAtom(isLoadingAtom);
   const [width, setWidth] = useState(300);
   const [isResizing, setIsResizing] = useState(false);
+  const [indexableColumns] = useAtom(indexableColumnsAtom);
 
   const handleFetchData = () => {
     if (fetchMode === "bbox") {
@@ -161,15 +164,27 @@ const DataFetchControls = ({
 
             {/* Attribute Conditions Form */}
             {fetchMode === "attribute" && (
-              <AttributeConditionForm
-                handleFetchFcbWithAttributeConditions={(conditions) => {
-                  handleFetchFcbWithAttributeConditions(
-                    conditions,
-                    0,
-                    featureLimit
-                  );
-                }}
-              />
+              <>
+                {indexableColumns.length === 0 && isLoading ? (
+                  <div className="py-4 text-center text-gray-500">
+                    Loading available attributes...
+                  </div>
+                ) : indexableColumns.length === 0 ? (
+                  <div className="py-4 text-center text-gray-500">
+                    No indexable attributes found.
+                  </div>
+                ) : (
+                  <AttributeConditionForm
+                    handleFetchFcbWithAttributeConditions={(conditions) => {
+                      handleFetchFcbWithAttributeConditions(
+                        conditions,
+                        0,
+                        featureLimit
+                      );
+                    }}
+                  />
+                )}
+              </>
             )}
 
             {/* Fetch Button */}
