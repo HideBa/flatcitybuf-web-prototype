@@ -5,7 +5,7 @@ import { type CesiumComponentRef } from "resium";
 import { fetchFcb, fetchFcbWithAttributeConditions, getCjSeq } from "./api/fcb";
 import proj4 from "proj4";
 import { CjInfo } from "./components/cjpreviewer";
-import { Condition } from "./feature/attribute/hooks";
+import { type Condition } from "./feature/attribute/hooks";
 // Define coordinate systems
 proj4.defs([
   ["EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs"],

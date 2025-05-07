@@ -1,6 +1,8 @@
 import { useAtom } from "jotai";
 import { attributeConditionsAtom } from "@/store";
-import { type Condition } from "@/api/fcb";
+import { type Condition as ConditionType } from "@/api/fcb";
+
+export type Condition = ConditionType;
 
 type Props = {
   handleFetchFcbWithAttributeConditions: (attrCond: Condition[]) => void;

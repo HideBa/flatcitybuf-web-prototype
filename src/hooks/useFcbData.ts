@@ -1,4 +1,5 @@
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useMemo } from "react";
+import { type CjInfo } from "@/components/cjpreviewer";
 import { useAtom } from "jotai";
 import * as Cesium from "cesium";
 import proj4 from "proj4";
@@ -35,7 +36,7 @@ type Props = {
 type RectToDegrees = (rect: Cesium.Rectangle) => [number[], number[]];
 
 // Extended CjInfo with stats for UI display
-interface ExtendedCjInfo {
+type ExtendedCjInfo = {
   type?: string;
   features: unknown[];
   cj?: unknown;
@@ -47,7 +48,7 @@ interface ExtendedCjInfo {
     num_total_features: number;
     num_selected_features: number;
   };
-}
+};
 
 export const useFcbData = ({ fcbUrl }: Props) => {
   const [rectangle] = useAtom(rectangleAtom);
@@ -268,8 +269,25 @@ export const useFcbData = ({ fcbUrl }: Props) => {
     fetchMetadata();
   }, [fetchMode, fcbUrl, setFcbMeta, setIsLoading]);
 
+  const cj_result: CjInfo = useMemo(() => {
+    return {
+      features: result?.features ?? [],
+      cj: result?.cj ?? {},
+      stats: {
+        num_total_features: result?.meta.features_count ?? 0,
+        num_selected_features: result?.meta.fetched_features_count ?? 0,
+        median_roof_height: 0, //TODO: Add this later
+        ratio_of_green_house_warehouse: 0,
+        num_ahn3_ahn4_change: 0,
+        unsuccess_num: 0,
+        ave_volume_lod2: 0,
+        ave_construction_year: 0,
+      },
+    };
+  }, [result]);
+
   return {
-    result,
+    result: cj_result,
     handleFetchFcb,
     handleFetchFcbWithAttributeConditions,
     loadNextBatch,
