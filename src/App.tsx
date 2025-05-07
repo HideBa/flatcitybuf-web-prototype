@@ -41,7 +41,8 @@ function App() {
   // const fcbUrl = "https://storage.googleapis.com/flatcitybuf/delft_attr.fcb";
   // const fcbUrl = "https://storage.googleapis.com/flatcitybuf/3dbag_100k.fcb";
   // const fcbUrl = "https://storage.googleapis.com/flatcitybuf/3dbag_subset.fcb";
-  const fcbUrl = "https://storage.googleapis.com/flatcitybuf/3dbag_subset.fcb";
+  const fcbUrl =
+    "https://storage.googleapis.com/flatcitybuf/3dbag_subset_all_index.fcb";
   // const fcbUrl = "http://127.0.0.1:5501/src/rust/temp/3dbag_subset.fcb";
   // const fcbUrl = "http://127.0.0.1:5501/src/rust/temp/3dbag_partial.fcb";
 
