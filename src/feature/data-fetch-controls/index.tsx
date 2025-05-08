@@ -46,7 +46,7 @@ const DataFetchControls = ({
   const [hasMoreData] = useAtom(hasMoreDataAtom);
   const [lastFetchData] = useAtom(lastFetchedDataAtom);
   const [isLoading] = useAtom(isLoadingAtom);
-  const [width, setWidth] = useState(300);
+  const [width, setWidth] = useState(500);
   const [isResizing, setIsResizing] = useState(false);
   const [indexableColumns] = useAtom(indexableColumnsAtom);
 

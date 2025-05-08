@@ -18,14 +18,14 @@ export type LastFetchedData = {
 export const rectangleAtom = atom<Cesium.Rectangle | null>(null);
 export const fetchModeAtom = atom<FetchMode>("bbox");
 export const attributeConditionsAtom = atom<Condition[]>([
-  { attribute: "b3_h_dak_50p", operator: "Gt", value: 20.0 },
+  { attribute: "b3_h_dak_50p", operator: "Gt", value: 40.0 },
   {
     attribute: "identificatie",
     operator: "Eq",
-    value: "NL.IMBAG.Pand.0503100000012869",
+    value: "NL.IMBAG.Pand.0273100000005183",
   },
 ]);
-export const featureLimitAtom = atom<number>(100);
+export const featureLimitAtom = atom<number>(10);
 export const isLoadingAtom = atom<boolean>(false);
 export const lastFetchedDataAtom = atom<LastFetchedData | null>(null);
 export const fcbMetaAtom = atom<FcbMeta | null>(null);

@@ -12,6 +12,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.13",
+    "@radix-ui/react-popover": "^1.1.13",
     "@radix-ui/react-progress": "^1.1.1",
     "@radix-ui/react-select": "^2.1.6",
     "@radix-ui/react-slot": "^1.1.1",

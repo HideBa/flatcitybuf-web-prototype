@@ -77,9 +77,14 @@ export async function fetchFcbMeta(fcbUrl: string): Promise<FcbMeta> {
 
     // Get the metadata directly from the reader
     const meta = await reader.meta();
-
+    const indexableColumns = meta.columns?.filter(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (column: any) => column.attrIndex === true
+    );
+    console.log("indexableColumns", indexableColumns);
+    // Filter columns with attrIndex set to true
     return {
-      columns: meta.columns || [],
+      columns: indexableColumns,
       featureCount: meta.featureCount || 0,
     };
   } catch (error) {

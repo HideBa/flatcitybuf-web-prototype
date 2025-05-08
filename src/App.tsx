@@ -22,6 +22,7 @@ import CjPreviewer from "./components/cjpreviewer";
 import { Spinner } from "./components/spinner";
 import DataFetchControls from "./feature/data-fetch-controls";
 import { isLoadingAtom, rectangleAtom } from "./store";
+import InfoPopup from "./components/InfoPopup";
 
 function App() {
   const delftLatLng = Cesium.Cartesian3.fromDegrees(
@@ -97,6 +98,16 @@ function App() {
                 hasRectangle={!!rectangle}
               />
             </div>
+
+            {/* Info Popup */}
+            <div className="absolute top-12 right-4 z-10">
+              <InfoPopup
+                title="FlatCityBuf Prototype"
+                description="This application is a prototype for FlatCityBuf, a cloud-optimized CityJSON format for efficient city data streaming."
+                description2="The data is derived from the 3DBAG dataset, the subset of 3DBAG data. (approx 3GB, 529480 CityJSON features)"
+              />
+            </div>
+
             <Viewer
               ref={viewerRef}
               timeline={false}
