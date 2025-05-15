@@ -95,6 +95,7 @@ export const useFcbData = ({ fcbUrl }: Props) => {
         type: "bbox",
         bbox,
       };
+      console.log("query", query);
       // Use the updated fetchFcb with our efficient reader
       const fetchResult = await fetchFcb(fcbUrl, query, offset, limit);
 
@@ -132,17 +133,21 @@ export const useFcbData = ({ fcbUrl }: Props) => {
 
   const handleFetchFcbWithPoint = useCallback(
     async (offset = 0, limit = featureLimit) => {
+      console.log("point --", point);
       if (!point) return;
       setIsLoading(true);
 
       // Convert Cartesian3 point to the Dutch coordinate system
       const dutchCoords = pointToDegrees(point);
 
+      console.log("dutchCoords --", dutchCoords);
+
       // Use the fetchFcbWithPoint with our efficient reader
       const query: SpatialQuery = {
-        type: "pointIntersects",
+        type: spatialQueryType,
         point: dutchCoords,
       };
+      console.log("fetch num---: ", featureLimit);
       const fetchResult = await fetchFcb(fcbUrl, query, offset, limit);
 
       // Update state with pagination info

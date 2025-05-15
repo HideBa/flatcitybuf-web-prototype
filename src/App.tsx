@@ -8,13 +8,13 @@ import {
   ScreenSpaceCameraController,
   Entity,
   PointGraphics,
+  RectangleGraphics,
 } from "resium";
 import * as Cesium from "cesium";
 import { Allotment } from "allotment";
 import "allotment/dist/style.css";
 import { useAtom } from "jotai";
 
-import { Button } from "@/components/ui/button";
 import { useCesiumControls } from "./hooks/useCesiumControls";
 import { useFcbData } from "./hooks/useFcbData";
 
@@ -47,6 +47,19 @@ function App() {
   const [spatialQueryType] = useAtom(spatialQueryTypeAtom);
   const [isLoading] = useAtom(isLoadingAtom);
 
+  const delftLatLng = Cesium.Cartesian3.fromDegrees(
+    4.369802767481661,
+    52.00151347611216,
+    1000
+  );
+  const offset = new Cesium.Cartesian3(0, 0, 1000);
+
+  const dataExtent = Cesium.Rectangle.fromDegrees(
+    4.293270749721231,
+    51.819302473968676,
+    4.610321175379964,
+    52.06078090037606
+  );
   // Data URL
   const fcbUrl =
     "https://storage.googleapis.com/flatcitybuf/3dbag_subset_all_index.fcb";
@@ -73,40 +86,21 @@ function App() {
       <Allotment vertical>
         <Allotment.Pane className="h-full">
           <div className="relative h-full">
-            <Viewer
-              ref={viewerRef}
-              resolutionScale={window.devicePixelRatio}
-              timeline={false}
-              animation={false}
-              baseLayerPicker={false}
-              geocoder={true}
-              // homeButton={false}
-              // sceneModePicker={false}
-              // For high-DPI displays
-              // requestRenderMode={true}
-              // projectionPicker={false}/
-              // vrButton={false}
-              // fullscreenButton={false}
-              // infoBox={false}
-              // navigationHelpButton={false}
-              // selectionIndicator={false}
-              // navigationInstructionsInitiallyVisible={false}
-            >
+            <Viewer ref={viewerRef} infoBox={false}>
               <Scene />
 
               <CameraLookAt
                 // Center of the netherlands
-                offset={new Cesium.Cartesian3(0, 0, 1000)}
+                offset={offset}
                 once
-                target={Cesium.Cartesian3.fromDegrees(5.1, 52.1, 0)}
+                target={delftLatLng}
               />
 
               <ScreenSpaceCameraController
                 enableRotate={!isDrawMode}
                 enableTranslate={true}
-                enableZoom={true}
-                enableTilt={true}
-                enableLook={true}
+                enableTilt={!isDrawMode}
+                enableLook={!isDrawMode}
               />
 
               <ImageryLayer
@@ -115,7 +109,6 @@ function App() {
                     url: "https://tile.openstreetmap.org/",
                   })
                 }
-                alpha={0.7}
               />
 
               <ScreenSpaceEventHandler>
@@ -137,14 +130,24 @@ function App() {
                 />
               </ScreenSpaceEventHandler>
 
+              {/* Display the data extent */}
+              <Entity>
+                <RectangleGraphics
+                  coordinates={dataExtent}
+                  material={Cesium.Color.GRAY.withAlpha(0.2)}
+                  outline={true}
+                  outlineColor={Cesium.Color.GRAY}
+                />
+              </Entity>
+
               {/* Display the intermediateRectangle */}
               {intermediateRectangle && !isPointMode && (
                 <Entity
                   rectangle={{
                     coordinates: intermediateRectangle,
-                    material: Cesium.Color.BLUE.withAlpha(0.2),
+                    material: Cesium.Color.GRAY.withAlpha(0.5),
                     outline: true,
-                    outlineColor: Cesium.Color.BLUE,
+                    outlineColor: Cesium.Color.GRAY,
                   }}
                 />
               )}
@@ -154,9 +157,9 @@ function App() {
                 <Entity
                   rectangle={{
                     coordinates: rectangle,
-                    material: Cesium.Color.RED.withAlpha(0.3),
+                    material: Cesium.Color.GRAY.withAlpha(0.7),
                     outline: true,
-                    outlineColor: Cesium.Color.RED,
+                    outlineColor: Cesium.Color.GRAY,
                   }}
                 />
               )}
@@ -166,7 +169,7 @@ function App() {
                 <Entity position={point}>
                   <PointGraphics
                     pixelSize={10}
-                    color={Cesium.Color.RED}
+                    color={Cesium.Color.GRAY}
                     outlineColor={Cesium.Color.WHITE}
                     outlineWidth={2}
                   />

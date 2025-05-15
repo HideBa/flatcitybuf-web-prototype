@@ -45,7 +45,7 @@ const getReaderState = async (
   url: string,
   query: FcbQuery
 ): Promise<ReaderState> => {
-  // await initWasm();
+  await initWasm();
 
   const cacheKey = createCacheKey(url, query);
 
@@ -74,8 +74,18 @@ const getReaderState = async (
       query.type === "pointIntersects" ||
       query.type === "pointNearest"
     ) {
-      const spatialQuery = new WasmSpatialQuery(query);
-      iterator = await reader.select_query(spatialQuery);
+      const queryObj = {
+        type: query.type,
+        minX: query.bbox?.[0],
+        minY: query.bbox?.[1],
+        maxX: query.bbox?.[2],
+        maxY: query.bbox?.[3],
+        x: query.point?.[0],
+        y: query.point?.[1],
+      };
+      const spatialQuery = new WasmSpatialQuery(queryObj);
+      console.log("spatialQuery", spatialQuery);
+      iterator = await reader.select_spatial(spatialQuery);
     } else if (query.type === "attr") {
       const attrParams = query.conditions.map((cond) => {
         return [cond.attribute, cond.operator, cond.value];
@@ -130,6 +140,7 @@ const fetchFeatures = async (
 
       try {
         const feature = await state.iterator.next();
+        console.log("feature --", feature);
         if (feature === undefined) {
           break;
         }
@@ -155,13 +166,17 @@ const fetchFeatures = async (
     // Collect features up to the limit
     const features = [];
     let collected = 0;
+    console.log("limit --", limit);
     while (collected < limit) {
+      console.log("collected --", collected);
       if (!state.iterator) {
+        console.log("no iterator");
         break;
       }
 
       try {
         const feature = await state.iterator.next();
+        console.log("feature --", feature);
         if (feature === undefined) {
           break;
         }
@@ -200,6 +215,7 @@ export const fetchFcb = async (
   limit = DEFAULT_LIMIT
 ) => {
   try {
+    console.log("fetch num---: ", limit);
     const result = await fetchFeatures(url, query, offset, limit);
 
     const headerJson = mapToJson(result.header);
@@ -233,7 +249,7 @@ export const fetchFcb = async (
  */
 export const getCjSeq = async (url: string, query: FcbQuery): Promise<File> => {
   try {
-    // await initWasm();
+    await initWasm();
     const reader = await new HttpFcbReader(url);
     const header = await reader.cityjson();
 
@@ -249,8 +265,15 @@ export const getCjSeq = async (url: string, query: FcbQuery): Promise<File> => {
         query.type === "pointIntersects" ||
         query.type === "pointNearest"
       ) {
-        const spatialQuery = new WasmSpatialQuery(query);
-        iterator = await reader.select_query(spatialQuery);
+        const queryObj = {
+          type: query.type,
+          minX: query.bbox?.[0],
+          minY: query.bbox?.[1],
+          maxX: query.bbox?.[2],
+          maxY: query.bbox?.[3],
+        };
+        const spatialQuery = new WasmSpatialQuery(queryObj);
+        iterator = await reader.select_spatial(spatialQuery);
       } else if (query.type === "attr") {
         const attrParams = query.conditions.map((cond) => {
           return [cond.attribute, cond.operator, cond.value];
@@ -270,13 +293,10 @@ export const getCjSeq = async (url: string, query: FcbQuery): Promise<File> => {
         }
 
         // Clean up WASM resources
-        iterator.free();
       }
     } finally {
-      // Always free the reader
-      reader.free();
+      console.log("finally");
     }
-
     // Create and return file object
     const blob = new Blob([jsonlContent], { type: "application/x-jsonlines" });
     return new File([blob], "features.jsonl", {

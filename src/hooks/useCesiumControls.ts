@@ -18,7 +18,7 @@ export const useCesiumControls = () => {
   const [currentPoint, setCurrentPoint] = useState<Cesium.Cartesian3 | null>(
     null
   );
-  const [isDrawMode, setIsDrawMode] = useState(false);
+  const [isDrawMode, setIsDrawMode] = useState(true);
   const [isDrawing, setIsDrawing] = useState(false);
   const [, setRectangle] = useAtom(rectangleAtom);
   const [, setPoint] = useAtom(pointAtom);
@@ -35,15 +35,17 @@ export const useCesiumControls = () => {
 
   // Get intermediate rectangle for drawing preview
   const intermediateRectangle = useMemo(() => {
-    if (!firstPoint || !currentPoint) return undefined;
+    return new Cesium.CallbackProperty(() => {
+      if (!firstPoint || !currentPoint) return undefined;
 
-    const carto1 = Cesium.Cartographic.fromCartesian(firstPoint);
-    const carto2 = Cesium.Cartographic.fromCartesian(currentPoint);
+      const carto1 = Cesium.Cartographic.fromCartesian(firstPoint);
+      const carto2 = Cesium.Cartographic.fromCartesian(currentPoint);
 
-    return Cesium.Rectangle.fromCartographicArray([
-      new Cesium.Cartographic(carto1.longitude, carto1.latitude),
-      new Cesium.Cartographic(carto2.longitude, carto2.latitude),
-    ]);
+      return Cesium.Rectangle.fromCartographicArray([
+        new Cesium.Cartographic(carto1.longitude, carto1.latitude),
+        new Cesium.Cartographic(carto2.longitude, carto2.latitude),
+      ]);
+    }, false);
   }, [firstPoint, currentPoint]);
 
   const toggleDrawMode = useCallback(() => {
