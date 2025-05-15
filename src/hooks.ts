@@ -1,11 +1,12 @@
 import * as Cesium from "cesium";
-import { type Cartesian2 } from "cesium";
+import type { Cartesian2 } from "cesium";
 import { useState, useCallback, useRef, useMemo } from "react";
-import { type CesiumComponentRef } from "resium";
-import { fetchFcb, fetchFcbWithAttributeConditions, getCjSeq } from "./api/fcb";
+import type { CesiumComponentRef } from "resium";
+import { fetchFcb, getCjSeq } from "./api/fcb/query";
 import proj4 from "proj4";
-import { CjInfo } from "./components/cjpreviewer";
-import { type Condition } from "./feature/attribute/hooks";
+import type { CjInfo } from "./components/cjpreviewer";
+import type { Condition } from "./feature/attribute/hooks";
+import type { AttributeQuery, FcbQuery } from "./api/fcb/types";
 // Define coordinate systems
 proj4.defs([
   ["EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs"],
@@ -67,6 +68,7 @@ const useHooks = ({ fcbUrl }: Props) => {
   const [lastFetchedData, setLastFetchedData] =
     useState<LastFetchedData | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   const toggleDrawMode = useCallback(() => {
     setIsDrawMode((prev) => {
       if (prev) {
@@ -152,9 +154,13 @@ const useHooks = ({ fcbUrl }: Props) => {
       const maxPoint = proj4("EPSG:4326", "EPSG:28992", max);
 
       const bbox = [minPoint[0], minPoint[1], maxPoint[0], maxPoint[1]];
+      const query: FcbQuery = {
+        type: "bbox",
+        bbox,
+      };
 
       // Use the updated fetchFcb with our efficient reader
-      const fetchResult = await fetchFcb(fcbUrl, bbox, offset, limit);
+      const fetchResult = await fetchFcb(fcbUrl, query, offset, limit);
 
       // Update state with pagination info
       setLastFetchedData({
@@ -183,13 +189,13 @@ const useHooks = ({ fcbUrl }: Props) => {
     async (attrCond: Condition[], offset = 0, limit = 10) => {
       setIsLoading(true);
 
+      const query: AttributeQuery = {
+        type: "attr",
+        conditions: attrCond,
+      };
+
       // Use the updated attribute conditions fetch with our efficient reader
-      const fetchResult = await fetchFcbWithAttributeConditions(
-        fcbUrl,
-        attrCond,
-        offset,
-        limit
-      );
+      const fetchResult = await fetchFcb(fcbUrl, query, offset, limit);
 
       // Update state with pagination info
       setLastFetchedData({
@@ -222,12 +228,11 @@ const useHooks = ({ fcbUrl }: Props) => {
 
       if (lastFetchedData.type === "bbox" && lastFetchedData.bbox) {
         // Use the cached reader state through the closure
-        const fetchResult = await fetchFcb(
-          fcbUrl,
-          lastFetchedData.bbox,
-          offset,
-          limit
-        );
+        const query: FcbQuery = {
+          type: "bbox",
+          bbox: lastFetchedData.bbox,
+        };
+        const fetchResult = await fetchFcb(fcbUrl, query, offset, limit);
 
         // Update state with new pagination info
         setLastFetchedData({
@@ -248,13 +253,12 @@ const useHooks = ({ fcbUrl }: Props) => {
         lastFetchedData.type === "attribute" &&
         lastFetchedData.attributes
       ) {
+        const query: AttributeQuery = {
+          type: "attr",
+          conditions: lastFetchedData.attributes,
+        };
         // Use the cached reader state through the closure
-        const fetchResult = await fetchFcbWithAttributeConditions(
-          fcbUrl,
-          lastFetchedData.attributes,
-          offset,
-          limit
-        );
+        const fetchResult = await fetchFcb(fcbUrl, query, offset, limit);
 
         // Update state with new pagination info
         setLastFetchedData({
@@ -284,12 +288,12 @@ const useHooks = ({ fcbUrl }: Props) => {
 
     const minPoint = proj4("EPSG:4326", "EPSG:28992", min);
     const maxPoint = proj4("EPSG:4326", "EPSG:28992", max);
-    const cjSeq = await getCjSeq(fcbUrl, [
-      minPoint[0],
-      minPoint[1],
-      maxPoint[0],
-      maxPoint[1],
-    ]);
+    // TODO: add flexible donwload
+    const query: FcbQuery = {
+      type: "bbox",
+      bbox: [minPoint[0], minPoint[1], maxPoint[0], maxPoint[1]],
+    };
+    const cjSeq = await getCjSeq(fcbUrl, query);
     const url = URL.createObjectURL(cjSeq);
     window.open(url, "_blank");
   }, [fcbUrl, rectToDegrees, rectangle]);

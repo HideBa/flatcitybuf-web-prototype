@@ -338,6 +338,7 @@ export const useFcbData = ({ fcbUrl }: Props) => {
         console.error("Error fetching FCB metadata:", error);
       }
     };
+
     fetchMetadata();
   }, [fcbUrl, setFcbMeta]);
 
