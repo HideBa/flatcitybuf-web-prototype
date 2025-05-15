@@ -7,19 +7,19 @@
 // import { DebugTilesPlugin } from "3d-tiles-renderer";
 
 type Props = {
-  url: string;
+	url: string;
 };
 
 const Tileset = ({ url: _ }: Props) => {
-  // Return an empty group that holds the tileset
-  return <></>;
-  // return (
-  //   <TilesRenderer url={url}>
-  //     {/* <TilesPlugin plugin={DebugTilesPlugin} displayBoxBounds={true} /> */}
-  //     <GlobeControls />
-  //     <TilesAttributionOverlay />
-  //   </TilesRenderer>
-  // );
+	// Return an empty group that holds the tileset
+	return <></>;
+	// return (
+	//   <TilesRenderer url={url}>
+	//     {/* <TilesPlugin plugin={DebugTilesPlugin} displayBoxBounds={true} /> */}
+	//     <GlobeControls />
+	//     <TilesAttributionOverlay />
+	//   </TilesRenderer>
+	// );
 };
 
 export default Tileset;
