@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { useAtom } from "jotai";
 import { attributeConditionsAtom, indexableColumnsAtom } from "@/store";
-import { type Condition } from "@/api/fcb";
+import type { Condition } from "@/api/fcb/types";
 
 const AttributeConditionForm = ({
   handleFetchFcbWithAttributeConditions,
@@ -38,7 +38,10 @@ const AttributeConditionForm = ({
     <div className="space-y-3 mt-2">
       <div className="space-y-2">
         {conditions.map((cond, index) => (
-          <div key={index} className="flex items-center gap-2">
+          <div
+            key={`${cond.attribute}-${cond.operator}-${cond.value}`}
+            className="flex items-center gap-2"
+          >
             {/* Attribute Select - replaces the Input */}
             <Select
               value={cond.attribute}

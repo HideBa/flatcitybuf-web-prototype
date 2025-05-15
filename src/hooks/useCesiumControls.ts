@@ -1,8 +1,8 @@
 import * as Cesium from "cesium";
 import { useAtom } from "jotai";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { type CesiumComponentRef } from "resium";
-import { rectangleAtom } from "@/store";
+import type { CesiumComponentRef } from "resium";
+import { rectangleAtom, pointAtom, spatialQueryTypeAtom } from "@/store";
 
 // Additional helper types
 type MouseEvent = {
@@ -18,22 +18,32 @@ export const useCesiumControls = () => {
   const [currentPoint, setCurrentPoint] = useState<Cesium.Cartesian3 | null>(
     null
   );
-  const [isDrawMode, setIsDrawMode] = useState(true);
+  const [isDrawMode, setIsDrawMode] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [, setRectangle] = useAtom(rectangleAtom);
+  const [, setPoint] = useAtom(pointAtom);
+  const [spatialQueryType] = useAtom(spatialQueryTypeAtom);
 
-  const rectangleCallbackProperty = useMemo(() => {
-    return new Cesium.CallbackProperty(() => {
-      if (!firstPoint || !currentPoint) return undefined;
+  const handleToggleDrawMode = useCallback(() => {
+    setIsDrawMode((prev) => !prev);
+  }, []);
 
-      const carto1 = Cesium.Cartographic.fromCartesian(firstPoint);
-      const carto2 = Cesium.Cartographic.fromCartesian(currentPoint);
+  // Determine if we're in point or rectangle mode
+  const isPointMode =
+    spatialQueryType === "pointIntersects" ||
+    spatialQueryType === "pointNearest";
 
-      return Cesium.Rectangle.fromCartographicArray([
-        new Cesium.Cartographic(carto1.longitude, carto1.latitude),
-        new Cesium.Cartographic(carto2.longitude, carto2.latitude),
-      ]);
-    }, false);
+  // Get intermediate rectangle for drawing preview
+  const intermediateRectangle = useMemo(() => {
+    if (!firstPoint || !currentPoint) return undefined;
+
+    const carto1 = Cesium.Cartographic.fromCartesian(firstPoint);
+    const carto2 = Cesium.Cartographic.fromCartesian(currentPoint);
+
+    return Cesium.Rectangle.fromCartographicArray([
+      new Cesium.Cartographic(carto1.longitude, carto1.latitude),
+      new Cesium.Cartographic(carto2.longitude, carto2.latitude),
+    ]);
   }, [firstPoint, currentPoint]);
 
   const toggleDrawMode = useCallback(() => {
@@ -49,7 +59,9 @@ export const useCesiumControls = () => {
 
   const handleMouseDown = useCallback(
     (event: MouseEvent) => {
-      if (!isDrawMode || !viewerRef.current?.cesiumElement) return;
+      if (!isDrawMode || !viewerRef.current?.cesiumElement || isPointMode)
+        return;
+
       // Use position if available
       const position = event.position || event.startPosition;
       if (!position) return;
@@ -61,13 +73,19 @@ export const useCesiumControls = () => {
         setFirstPoint(cartesian);
       }
     },
-    [isDrawMode]
+    [isDrawMode, isPointMode]
   );
 
   const handleMouseMove = useCallback(
     (event: MouseEvent) => {
-      if (!isDrawMode || !isDrawing || !viewerRef.current?.cesiumElement)
+      if (
+        !isDrawMode ||
+        !isDrawing ||
+        !viewerRef.current?.cesiumElement ||
+        isPointMode
+      )
         return;
+
       // Use endPosition if available, fallback to position
       const position = event.endPosition || event.position;
       if (!position) return;
@@ -78,11 +96,11 @@ export const useCesiumControls = () => {
         setCurrentPoint(cartesian);
       }
     },
-    [isDrawMode, isDrawing]
+    [isDrawMode, isDrawing, isPointMode]
   );
 
   const handleMouseUp = useCallback(() => {
-    if (!isDrawMode || !isDrawing) return;
+    if (!isDrawMode || !isDrawing || isPointMode) return;
 
     setIsDrawing(false);
     if (firstPoint && currentPoint) {
@@ -96,7 +114,32 @@ export const useCesiumControls = () => {
 
       setRectangle(rectangle);
     }
-  }, [firstPoint, currentPoint, isDrawMode, isDrawing, setRectangle]);
+  }, [
+    firstPoint,
+    currentPoint,
+    isDrawMode,
+    isDrawing,
+    isPointMode,
+    setRectangle,
+  ]);
+
+  // Handle point clicking for point-based spatial queries
+  const handlePointClick = useCallback(
+    (event: MouseEvent) => {
+      if (!isDrawMode || !isPointMode || !viewerRef.current?.cesiumElement)
+        return;
+
+      const position = event.position;
+      if (!position) return;
+
+      const viewer = viewerRef.current.cesiumElement;
+      const cartesian = viewer.scene.pickPosition(position);
+      if (cartesian) {
+        setPoint(cartesian);
+      }
+    },
+    [isDrawMode, isPointMode, setPoint]
+  );
 
   return {
     viewerRef,
@@ -104,8 +147,11 @@ export const useCesiumControls = () => {
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
+
     toggleDrawMode,
     isDrawMode,
-    rectangleCallbackProperty,
+    handleToggleDrawMode,
+    intermediateRectangle,
+    handlePointClick,
   };
 };

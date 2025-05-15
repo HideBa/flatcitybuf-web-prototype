@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { type Condition } from "@/api/fcb";
 import AttributeConditionForm from "../attribute";
 import { useState } from "react";
 import {
@@ -15,12 +14,17 @@ import {
   hasMoreDataAtom,
   lastFetchedDataAtom,
   isLoadingAtom,
-  FetchMode,
+  type FetchMode,
   indexableColumnsAtom,
+  spatialQueryTypeAtom,
 } from "@/store";
+import type { Condition, SpatialQueryType } from "@/api/fcb/types";
 
 interface DataFetchControlsProps {
   handleFetchFcb: (offset?: number, limit?: number) => void;
+  handleFetchFcbWithPoint: (offset?: number, limit?: number) => void;
+  handleToggleDrawMode: () => void;
+  isDrawMode: boolean;
   handleFetchFcbWithAttributeConditions: (
     attrCond: Condition[],
     offset?: number,
@@ -29,17 +33,23 @@ interface DataFetchControlsProps {
   loadNextBatch: (offset: number, limit: number) => void;
   handleCjSeqDownload: () => void;
   hasRectangle: boolean;
+  hasPoint: boolean;
 }
 
 const DataFetchControls = ({
   handleFetchFcb,
+  handleFetchFcbWithPoint,
+  handleToggleDrawMode,
+  isDrawMode,
   handleFetchFcbWithAttributeConditions,
   loadNextBatch,
   handleCjSeqDownload,
   hasRectangle,
+  hasPoint,
 }: DataFetchControlsProps) => {
   // Use Jotai atoms for state
   const [fetchMode, setFetchMode] = useAtom(fetchModeAtom);
+  const [spatialQueryType, setSpatialQueryType] = useAtom(spatialQueryTypeAtom);
   const [featureLimit, setFeatureLimit] = useAtom(featureLimitAtom);
   const [attributeConditions] = useAtom(attributeConditionsAtom);
   const [canFetchData] = useAtom(canFetchDataAtom);
@@ -50,9 +60,17 @@ const DataFetchControls = ({
   const [isResizing, setIsResizing] = useState(false);
   const [indexableColumns] = useAtom(indexableColumnsAtom);
 
+  // Check if we have the required geometry for the current spatial query type
+  const hasSpatialData = spatialQueryType === "bbox" ? hasRectangle : hasPoint;
+
   const handleFetchData = () => {
-    if (fetchMode === "bbox") {
-      handleFetchFcb(0, featureLimit);
+    if (fetchMode === "spatial") {
+      if (spatialQueryType === "bbox") {
+        handleFetchFcb(0, featureLimit);
+      } else {
+        // Use the point-based fetch for pointIntersects and pointNearest
+        handleFetchFcbWithPoint(0, featureLimit);
+      }
     } else {
       // Use the actual attribute conditions instead of an empty array
       handleFetchFcbWithAttributeConditions(
@@ -113,7 +131,7 @@ const DataFetchControls = ({
             <div className="space-y-2">
               <Label>Fetch Mode</Label>
               <RadioGroup
-                defaultValue="bbox"
+                defaultValue="spatial"
                 value={fetchMode}
                 onValueChange={(value: string) =>
                   setFetchMode(value as FetchMode)
@@ -121,8 +139,8 @@ const DataFetchControls = ({
                 className="flex flex-row gap-4"
               >
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="bbox" id="bbox" />
-                  <Label htmlFor="bbox">BBox</Label>
+                  <RadioGroupItem value="spatial" id="spatial" />
+                  <Label htmlFor="spatial">Spatial</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="attribute" id="attribute" />
@@ -130,6 +148,47 @@ const DataFetchControls = ({
                 </div>
               </RadioGroup>
             </div>
+
+            {/* Spatial Query Type Selection (if spatial mode is selected) */}
+            {fetchMode === "spatial" && (
+              <div className="space-y-2">
+                <Label>Spatial Query Type</Label>
+                <RadioGroup
+                  value={spatialQueryType}
+                  onValueChange={(value: string) =>
+                    setSpatialQueryType(value as SpatialQueryType)
+                  }
+                  className="flex flex-row gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="bbox" id="bbox" />
+                    <Label htmlFor="bbox">BBox</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem
+                      value="pointIntersects"
+                      id="pointIntersects"
+                    />
+                    <Label htmlFor="pointIntersects">Point Intersect</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="pointNearest" id="pointNearest" />
+                    <Label htmlFor="pointNearest">Nearest Neighbor</Label>
+                  </div>
+                </RadioGroup>
+                <Button onClick={handleToggleDrawMode}>
+                  Draw geometry {isDrawMode ? "On" : "Off"}
+                </Button>
+
+                {!hasSpatialData && (
+                  <div className="text-yellow-600 text-sm mt-1">
+                    {spatialQueryType === "bbox"
+                      ? "Draw a rectangle on the map first"
+                      : "Add a point on the map first"}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Feature Limit Control */}
             <div className="grid grid-cols-2 gap-2 items-end">
@@ -143,7 +202,7 @@ const DataFetchControls = ({
                   value={featureLimit}
                   step={100}
                   onChange={(e) =>
-                    setFeatureLimit(parseInt(e.target.value) || 100)
+                    setFeatureLimit(Number.parseInt(e.target.value) || 100)
                   }
                 />
               </div>
@@ -163,29 +222,26 @@ const DataFetchControls = ({
             </div>
 
             {/* Attribute Conditions Form */}
-            {fetchMode === "attribute" && (
-              <>
-                {indexableColumns.length === 0 && isLoading ? (
-                  <div className="py-4 text-center text-gray-500">
-                    Loading available attributes...
-                  </div>
-                ) : indexableColumns.length === 0 ? (
-                  <div className="py-4 text-center text-gray-500">
-                    No indexable attributes found.
-                  </div>
-                ) : (
-                  <AttributeConditionForm
-                    handleFetchFcbWithAttributeConditions={(conditions) => {
-                      handleFetchFcbWithAttributeConditions(
-                        conditions,
-                        0,
-                        featureLimit
-                      );
-                    }}
-                  />
-                )}
-              </>
-            )}
+            {fetchMode === "attribute" &&
+              (indexableColumns.length === 0 && isLoading ? (
+                <div className="py-4 text-center text-gray-500">
+                  Loading available attributes...
+                </div>
+              ) : indexableColumns.length === 0 ? (
+                <div className="py-4 text-center text-gray-500">
+                  No indexable attributes found.
+                </div>
+              ) : (
+                <AttributeConditionForm
+                  handleFetchFcbWithAttributeConditions={(conditions) => {
+                    handleFetchFcbWithAttributeConditions(
+                      conditions,
+                      0,
+                      featureLimit
+                    );
+                  }}
+                />
+              ))}
 
             {/* Fetch Button */}
             <Button

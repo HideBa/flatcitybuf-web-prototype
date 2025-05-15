@@ -1,24 +1,21 @@
 import { useCallback, useState, useEffect, useMemo } from "react";
-import { type CjInfo } from "@/components/cjpreviewer";
+import type { CjInfo } from "@/components/cjpreviewer";
 import { useAtom } from "jotai";
 import * as Cesium from "cesium";
 import proj4 from "proj4";
 import {
-  fetchFcb,
-  fetchFcbWithAttributeConditions,
-  getCjSeq,
-  fetchFcbMeta,
-  type Condition,
-} from "@/api/fcb";
-import {
   attributeConditionsAtom,
   fcbMetaAtom,
-  fetchModeAtom,
   featureLimitAtom,
   isLoadingAtom,
   lastFetchedDataAtom,
   rectangleAtom,
+  pointAtom,
+  spatialQueryTypeAtom,
 } from "@/store";
+import { fetchFcb, getCjSeq } from "@/api/fcb/query";
+import type { AttributeQuery, Condition, SpatialQuery } from "@/api/fcb/types";
+import { fetchFcbMeta } from "@/api/fcb/meta";
 
 // Define coordinate systems
 proj4.defs([
@@ -34,6 +31,7 @@ type Props = {
 };
 
 type RectToDegrees = (rect: Cesium.Rectangle) => [number[], number[]];
+type PointToDegrees = (point: Cesium.Cartesian3) => number[];
 
 // Extended CjInfo with stats for UI display
 type ExtendedCjInfo = {
@@ -52,11 +50,12 @@ type ExtendedCjInfo = {
 
 export const useFcbData = ({ fcbUrl }: Props) => {
   const [rectangle] = useAtom(rectangleAtom);
+  const [point] = useAtom(pointAtom);
+  const [spatialQueryType] = useAtom(spatialQueryTypeAtom);
   const [, setIsLoading] = useAtom(isLoadingAtom);
   const [lastFetchedData, setLastFetchedData] = useAtom(lastFetchedDataAtom);
   const [featureLimit] = useAtom(featureLimitAtom);
   const [attributeConditions] = useAtom(attributeConditionsAtom);
-  const [fetchMode] = useAtom(fetchModeAtom);
   const [, setFcbMeta] = useAtom(fcbMetaAtom);
   const [result, setResult] = useState<ExtendedCjInfo | null>(null);
 
@@ -72,6 +71,15 @@ export const useFcbData = ({ fcbUrl }: Props) => {
     ];
   }, []);
 
+  const pointToDegrees = useCallback<PointToDegrees>((cartesian) => {
+    const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+    const lon = Cesium.Math.toDegrees(cartographic.longitude);
+    const lat = Cesium.Math.toDegrees(cartographic.latitude);
+
+    // Convert to Dutch coordinate system
+    return proj4("EPSG:4326", "EPSG:28992", [lon, lat]);
+  }, []);
+
   const handleFetchFcb = useCallback(
     async (offset = 0, limit = featureLimit) => {
       if (!rectangle) return;
@@ -83,13 +91,17 @@ export const useFcbData = ({ fcbUrl }: Props) => {
       const maxPoint = proj4("EPSG:4326", "EPSG:28992", max);
 
       const bbox = [minPoint[0], minPoint[1], maxPoint[0], maxPoint[1]];
-
+      const query: SpatialQuery = {
+        type: "bbox",
+        bbox,
+      };
       // Use the updated fetchFcb with our efficient reader
-      const fetchResult = await fetchFcb(fcbUrl, bbox, offset, limit);
+      const fetchResult = await fetchFcb(fcbUrl, query, offset, limit);
 
       // Update state with pagination info
       setLastFetchedData({
-        type: "bbox",
+        type: "spatial",
+        spatialQueryType: "bbox",
         bbox,
         totalFeatures: fetchResult.meta.features_count,
         currentOffset: offset + fetchResult.features.length,
@@ -118,6 +130,54 @@ export const useFcbData = ({ fcbUrl }: Props) => {
     ]
   );
 
+  const handleFetchFcbWithPoint = useCallback(
+    async (offset = 0, limit = featureLimit) => {
+      if (!point) return;
+      setIsLoading(true);
+
+      // Convert Cartesian3 point to the Dutch coordinate system
+      const dutchCoords = pointToDegrees(point);
+
+      // Use the fetchFcbWithPoint with our efficient reader
+      const query: SpatialQuery = {
+        type: "pointIntersects",
+        point: dutchCoords,
+      };
+      const fetchResult = await fetchFcb(fcbUrl, query, offset, limit);
+
+      // Update state with pagination info
+      setLastFetchedData({
+        type: "spatial",
+        spatialQueryType,
+        point: dutchCoords,
+        totalFeatures: fetchResult.meta.features_count,
+        currentOffset: offset + fetchResult.features.length,
+      });
+
+      const resultWithStats: ExtendedCjInfo = {
+        ...fetchResult,
+        stats: {
+          num_total_features: result?.meta.features_count ?? 0,
+          num_selected_features: result?.features.length ?? 0,
+        },
+      };
+
+      setResult(resultWithStats);
+      setIsLoading(false);
+    },
+    [
+      featureLimit,
+      point,
+      spatialQueryType,
+      setIsLoading,
+      pointToDegrees,
+      fcbUrl,
+      setLastFetchedData,
+      result?.meta.features_count,
+      result?.features.length,
+    ]
+  );
+
   const handleFetchFcbWithAttributeConditions = useCallback(
     async (
       attrCond: Condition[] = attributeConditions,
@@ -127,12 +187,11 @@ export const useFcbData = ({ fcbUrl }: Props) => {
       setIsLoading(true);
 
       // Use the updated attribute conditions fetch with our efficient reader
-      const fetchResult = await fetchFcbWithAttributeConditions(
-        fcbUrl,
-        attrCond,
-        offset,
-        limit
-      );
+      const query: AttributeQuery = {
+        type: "attr",
+        conditions: attrCond,
+      };
+      const fetchResult = await fetchFcb(fcbUrl, query, offset, limit);
 
       // Update state with pagination info
       setLastFetchedData({
@@ -170,14 +229,15 @@ export const useFcbData = ({ fcbUrl }: Props) => {
 
       setIsLoading(true);
 
-      if (lastFetchedData.type === "bbox" && lastFetchedData.bbox) {
+      if (lastFetchedData.type === "spatial") {
+        if (!lastFetchedData.spatialQueryType) return;
+        const query: SpatialQuery = {
+          type: lastFetchedData.spatialQueryType,
+          bbox: lastFetchedData.bbox,
+          point: lastFetchedData.point,
+        };
         // Use the cached reader state through the closure
-        const fetchResult = await fetchFcb(
-          fcbUrl,
-          lastFetchedData.bbox,
-          offset,
-          limit
-        );
+        const fetchResult = await fetchFcb(fcbUrl, query, offset, limit);
 
         // Update state with new pagination info
         setLastFetchedData({
@@ -193,17 +253,14 @@ export const useFcbData = ({ fcbUrl }: Props) => {
           },
         };
         setResult(resultWithStats);
-      } else if (
-        lastFetchedData.type === "attribute" &&
-        lastFetchedData.attributes
-      ) {
+      } else if (lastFetchedData.type === "attribute") {
+        if (!lastFetchedData.attributes) return;
         // Use the cached reader state through the closure
-        const fetchResult = await fetchFcbWithAttributeConditions(
-          fcbUrl,
-          lastFetchedData.attributes,
-          offset,
-          limit
-        );
+        const query: AttributeQuery = {
+          type: "attr",
+          conditions: lastFetchedData.attributes,
+        };
+        const fetchResult = await fetchFcb(fcbUrl, query, offset, limit);
 
         // Update state with new pagination info
         setLastFetchedData({
@@ -236,38 +293,48 @@ export const useFcbData = ({ fcbUrl }: Props) => {
 
   const handleCjSeqDownload = useCallback(async () => {
     if (!rectangle) return;
-    const [min, max] = rectToDegrees(rectangle);
+    if (lastFetchedData?.type === "spatial") {
+      if (!lastFetchedData.spatialQueryType) return;
+      const query = {
+        type: lastFetchedData.spatialQueryType,
+        bbox: lastFetchedData.bbox,
+        point: lastFetchedData.point,
+      };
+      const cjSeq = await getCjSeq(fcbUrl, query);
+      const url = URL.createObjectURL(cjSeq);
+      window.open(url, "_blank");
+    } else if (lastFetchedData?.type === "attribute") {
+      if (!lastFetchedData.attributes) return;
+      const query: AttributeQuery = {
+        type: "attr",
+        conditions: lastFetchedData.attributes,
+      };
+      const cjSeq = await getCjSeq(fcbUrl, query);
+      const url = URL.createObjectURL(cjSeq);
+      window.open(url, "_blank");
+    }
+  }, [
+    fcbUrl,
+    lastFetchedData?.attributes,
+    lastFetchedData?.bbox,
+    lastFetchedData?.point,
+    lastFetchedData?.spatialQueryType,
+    lastFetchedData?.type,
+    rectangle,
+  ]);
 
-    const minPoint = proj4("EPSG:4326", "EPSG:28992", min);
-    const maxPoint = proj4("EPSG:4326", "EPSG:28992", max);
-    const cjSeq = await getCjSeq(fcbUrl, [
-      minPoint[0],
-      minPoint[1],
-      maxPoint[0],
-      maxPoint[1],
-    ]);
-    const url = URL.createObjectURL(cjSeq);
-    window.open(url, "_blank");
-  }, [fcbUrl, rectangle, rectToDegrees]);
-
-  // Effect to fetch metadata when fetchMode changes to 'attribute'
+  // Fetch metadata on mount
   useEffect(() => {
     const fetchMetadata = async () => {
-      if (fetchMode === "attribute") {
-        try {
-          setIsLoading(true);
-          const meta = await fetchFcbMeta(fcbUrl);
-          setFcbMeta(meta);
-        } catch (error) {
-          console.error("Failed to fetch FCB metadata:", error);
-        } finally {
-          setIsLoading(false);
-        }
+      try {
+        const meta = await fetchFcbMeta(fcbUrl);
+        setFcbMeta(meta);
+      } catch (error) {
+        console.error("Error fetching FCB metadata:", error);
       }
     };
-
     fetchMetadata();
-  }, [fetchMode, fcbUrl, setFcbMeta, setIsLoading]);
+  }, [fcbUrl, setFcbMeta]);
 
   const cj_result: CjInfo = useMemo(() => {
     return {
@@ -289,6 +356,7 @@ export const useFcbData = ({ fcbUrl }: Props) => {
   return {
     result: cj_result,
     handleFetchFcb,
+    handleFetchFcbWithPoint,
     handleFetchFcbWithAttributeConditions,
     loadNextBatch,
     handleCjSeqDownload,

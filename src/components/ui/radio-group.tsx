@@ -58,7 +58,7 @@ const RadioGroupItem = React.forwardRef<HTMLInputElement, RadioGroupItemProps>(
             onChange={handleChange}
             {...props}
           />
-          <span className="pointer-events-none absolute h-2 w-2 rounded-full bg-white opacity-0 transition-opacity peer-checked:opacity-100"></span>
+          <span className="pointer-events-none absolute h-2 w-2 rounded-full bg-white opacity-0 transition-opacity peer-checked:opacity-100" />
         </span>
       </span>
     );

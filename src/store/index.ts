@@ -1,14 +1,19 @@
 import { atom } from "jotai";
-import { type Condition } from "@/api/fcb";
-import * as Cesium from "cesium";
-import { type Column, type FcbMeta } from "@/api/fcb";
+import type {
+  Column,
+  Condition,
+  FcbMeta,
+  SpatialQueryType,
+} from "@/api/fcb/types";
+import type * as Cesium from "cesium";
 
-// Types
-export type FetchMode = "bbox" | "attribute";
+export type FetchMode = "spatial" | "attribute";
 
 export type LastFetchedData = {
-  type: "bbox" | "attribute";
+  type: FetchMode;
   bbox?: number[];
+  point?: number[];
+  spatialQueryType?: SpatialQueryType;
   attributes?: Condition[];
   totalFeatures: number;
   currentOffset: number;
@@ -16,7 +21,9 @@ export type LastFetchedData = {
 
 // Atoms
 export const rectangleAtom = atom<Cesium.Rectangle | null>(null);
-export const fetchModeAtom = atom<FetchMode>("bbox");
+export const pointAtom = atom<Cesium.Cartesian3 | null>(null);
+export const fetchModeAtom = atom<FetchMode>("spatial");
+export const spatialQueryTypeAtom = atom<SpatialQueryType>("bbox");
 export const attributeConditionsAtom = atom<Condition[]>([
   { attribute: "b3_h_dak_50p", operator: "Gt", value: 40.0 },
   {
@@ -34,9 +41,13 @@ export const fcbMetaAtom = atom<FcbMeta | null>(null);
 export const canFetchDataAtom = atom((get) => {
   const fetchMode = get(fetchModeAtom);
   const rectangle = get(rectangleAtom);
+  const point = get(pointAtom);
+  const spatialQueryType = get(spatialQueryTypeAtom);
   const isLoading = get(isLoadingAtom);
 
-  return (fetchMode === "bbox" ? !!rectangle : true) && !isLoading;
+  const hasSpatialData = spatialQueryType === "bbox" ? !!rectangle : !!point;
+
+  return (fetchMode === "spatial" ? hasSpatialData : true) && !isLoading;
 });
 
 export const hasMoreDataAtom = atom((get) => {
