@@ -1,4 +1,4 @@
-import init, {
+import {
 	type AsyncFeatureIter,
 	HttpFcbReader,
 	WasmAttrQuery,

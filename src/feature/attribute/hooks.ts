@@ -1,4 +1,7 @@
-import type { Condition as ConditionType } from "@/api/fcb";
+import {
+	type Condition as ConditionType,
+	validOperators,
+} from "@/api/fcb/types";
 import { attributeConditionsAtom } from "@/store";
 import { useAtom } from "jotai";
 
@@ -11,7 +14,6 @@ type Props = {
 export const useAttributeConditionForm = ({
 	handleFetchFcbWithAttributeConditions,
 }: Props) => {
-	// Use Jotai atom instead of local state
 	const [conditions, setConditions] = useAtom(attributeConditionsAtom);
 
 	const updateCondition = (
@@ -27,7 +29,11 @@ export const useAttributeConditionForm = ({
 				newConditions[index][key] = Number.isNaN(num) ? value : num;
 			} else if (key === "operator") {
 				// Ensure the operator is one of the valid types
-				newConditions[index][key] = value as Condition["operator"];
+				if (validOperators.includes(value as Condition["operator"])) {
+					newConditions[index][key] = value as Condition["operator"];
+				} else {
+					return prev;
+				}
 			} else {
 				// For attribute field
 				newConditions[index][key] = value;

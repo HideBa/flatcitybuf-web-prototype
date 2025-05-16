@@ -5,6 +5,7 @@ const Label = React.forwardRef<
 	HTMLLabelElement,
 	React.LabelHTMLAttributes<HTMLLabelElement>
 >(({ className, ...props }, ref) => (
+	// biome-ignore lint/a11y/noLabelWithoutControl: <explanation> TODO refactor this components
 	<label
 		ref={ref}
 		className={cn(

@@ -24,10 +24,11 @@ export interface CjInfo {
 	};
 }
 
+export const validOperators = ["Gt", "Ge", "Eq", "Lt", "Le"] as const;
 // Types for attribute conditions
 export interface Condition {
 	attribute: string;
-	operator: "Gt" | "Ge" | "Eq" | "Lt" | "Le";
+	operator: (typeof validOperators)[number];
 	value: string | number;
 }
 
