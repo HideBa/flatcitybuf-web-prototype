@@ -24,3 +24,9 @@ dist-ssr
 *.sw?
 
 .cursor/rules/mcp.json
+.env
+.env.local
+.env.development
+.env.production
+.env.development.local
+.env.production.local

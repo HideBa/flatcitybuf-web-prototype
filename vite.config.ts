@@ -2,14 +2,14 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import cesium from "vite-plugin-cesium";
-import path from "path";
+import { resolve } from "node:path";
 
 export default defineConfig({
   plugins: [react(), cesium({ rebuildCesium: true })],
   resolve: {
     extensions: [".ts", ".tsx", ".js", ".jsx"],
     alias: {
-      "@": path.resolve(__dirname, "src"),
+      "@": resolve(__dirname, "src"),
     },
   },
   // test: {

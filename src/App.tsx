@@ -78,6 +78,12 @@ function App() {
     fcbUrl,
   });
 
+  const apiKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
+  const mapUrl = `https://maps.geoapify.com/v1/tile/toner-grey/{z}/{x}/{y}.png?&apiKey=${apiKey}`;
+  const imageryProvider = new Cesium.UrlTemplateImageryProvider({
+    url: mapUrl,
+  });
+
   // Is point or rectangle selection active
   const isPointMode =
     spatialQueryType === "pointIntersects" ||
@@ -105,13 +111,7 @@ function App() {
                 enableLook={!isDrawMode}
               />
 
-              <ImageryLayer
-                imageryProvider={
-                  new Cesium.OpenStreetMapImageryProvider({
-                    url: "https://tile.openstreetmap.org/",
-                  })
-                }
-              />
+              <ImageryLayer imageryProvider={imageryProvider} />
 
               <ScreenSpaceEventHandler>
                 <ScreenSpaceEvent
