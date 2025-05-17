@@ -56,12 +56,6 @@ function App() {
   );
   const offset = new Cesium.Cartesian3(0, 0, 1000);
 
-  // const dataExtent = Cesium.Rectangle.fromDegrees(
-  //   4.293270749721231,
-  //   51.819302473968676,
-  //   4.610321175379964,
-  //   52.06078090037606
-  // );
   // Data URL
   const fcbUrl =
     "https://storage.googleapis.com/flatcitybuf/3dbag_subset_all_index.fcb";
@@ -82,6 +76,7 @@ function App() {
   const mapUrl = `https://maps.geoapify.com/v1/tile/toner-grey/{z}/{x}/{y}.png?&apiKey=${apiKey}`;
   const imageryProvider = new Cesium.UrlTemplateImageryProvider({
     url: mapUrl,
+    credit: "© Geoapify, © OpenStreetMap contributors",
   });
 
   // Is point or rectangle selection active
@@ -92,9 +87,20 @@ function App() {
   return (
     <div className="h-screen w-screen">
       <Allotment vertical>
-        <Allotment.Pane className="h-full">
+        <Allotment.Pane>
           <div className="relative h-full">
-            <Viewer ref={viewerRef} infoBox={false}>
+            <Viewer
+              ref={viewerRef}
+              infoBox={false}
+              homeButton={false}
+              baseLayerPicker={false}
+              navigationHelpButton={false}
+              timeline={false}
+              animation={false}
+              fullscreenButton={false}
+              geocoder={false}
+              sceneModePicker={false}
+            >
               <Scene />
 
               <CameraLookAt
@@ -112,7 +118,14 @@ function App() {
               />
 
               <ImageryLayer imageryProvider={imageryProvider} />
-
+              {/* <ImageryLayer
+                imageryProvider={
+                  new Cesium.OpenStreetMapImageryProvider({
+                    url: "https://a.tile.openstreetmap.org/",
+                    credit: "© OpenStreetMap contributors",
+                  })
+                }
+              /> */}
               <ScreenSpaceEventHandler>
                 <ScreenSpaceEvent
                   action={handleMouseDown}
@@ -179,6 +192,15 @@ function App() {
                 </Entity>
               )}
             </Viewer>
+            {/* Info Popup */}
+            <div className="absolute top-4 right-4 z-10">
+              <InfoPopup
+                title="FlatCityBuf Prototype"
+                description="This application is a prototype for FlatCityBuf, a cloud-optimized CityJSON format for efficient city data streaming."
+                description2="The data is derived from the 3DBAG dataset, the subset of 3DBAG data. (approx 3GB, 529480 CityJSON features)"
+              />
+            </div>
+
             <div className="absolute top-4 left-4 z-10 flex flex-col gap-2 w-80">
               <DataFetchControls
                 handleFetchFcb={handleFetchFcb}
@@ -194,15 +216,6 @@ function App() {
                 hasPoint={!!point}
               />
 
-              {/* Info Popup */}
-              <div className="absolute top-12 right-4 z-10">
-                <InfoPopup
-                  title="FlatCityBuf Prototype"
-                  description="This application is a prototype for FlatCityBuf, a cloud-optimized CityJSON format for efficient city data streaming."
-                  description2="The data is derived from the 3DBAG dataset, the subset of 3DBAG data. (approx 3GB, 529480 CityJSON features)"
-                />
-              </div>
-
               {isLoading && (
                 <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
                   <div className="p-4 bg-white/50 rounded-md backdrop-blur-md border border-neutral-200 shadow-md">
@@ -210,6 +223,44 @@ function App() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Data Attribution */}
+            <div className="absolute bottom-2 right-2 z-10 text-xs text-neutral-600 bg-white/70 px-2 py-1 rounded-sm">
+              Data: ©{" "}
+              <a
+                href="https://3dbag.nl"
+                className="underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                3DBAG
+              </a>{" "}
+              | Map: © Powered by{" "}
+              <a
+                href="https://www.geoapify.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Geoapify
+              </a>{" "}
+              |{" "}
+              <a
+                href="https://openmaptiles.org/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                OpenMapTiles
+              </a>{" "}
+              |{" "}
+              <a
+                href="https://www.openstreetmap.org/copyright"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                © OpenStreetMap
+              </a>{" "}
+              contributors
             </div>
           </div>
         </Allotment.Pane>
