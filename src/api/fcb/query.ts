@@ -221,7 +221,7 @@ export const fetchFcb = async (
 
 		const cjInfo: CjInfo = {
 			cj: headerJson,
-			features: result.features,
+			features: result.features.map((feature) => mapToJson(feature)),
 			meta: {
 				features_count: result.totalCount,
 				fetched_features_count: result.currentPosition,
@@ -288,7 +288,8 @@ export const getCjSeq = async (url: string, query: FcbQuery): Promise<File> => {
 					if (feature === undefined) {
 						break;
 					}
-					jsonlContent += `${JSON.stringify(feature)}\n`;
+					const featureJson = mapToJson(feature);
+					jsonlContent += `${JSON.stringify(featureJson)}\n`;
 				}
 
 				// Clean up WASM resources

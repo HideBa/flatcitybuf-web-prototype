@@ -37,7 +37,7 @@ export async function fetchFcbMeta(fcbUrl: string): Promise<FcbMeta> {
 				// Get the metadata directly from the reader
 				const meta = await reader.meta();
 				const cj_map = await reader.cityjson();
-				const cj = mapToJson(cj_map);
+				const cj = mapToJson(cj_map) as Record<string, unknown>;
 				// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 				const geographicalExtent = (cj.metadata as any).geographicalExtent; // TODO: add zod to validate
 				const dataExtent: DataExtent = {
@@ -85,12 +85,34 @@ export async function fetchFcbMeta(fcbUrl: string): Promise<FcbMeta> {
 }
 
 /**
- * Convert Map to JSON object
+ * Recursively convert a Map or object with Maps into a plain JavaScript object
  */
-export const mapToJson = (map: Map<string, unknown>) => {
-	const obj: { [key: string]: unknown } = {};
-	for (const [key, value] of map.entries()) {
-		obj[key] = value instanceof Map ? mapToJson(value) : value;
+export const mapToJson = (item: unknown): unknown => {
+	// Handle Map objects
+	if (item instanceof Map) {
+		const obj: Record<string, unknown> = {};
+		item.forEach((value, key) => {
+			obj[key] = mapToJson(value);
+		});
+		return obj;
 	}
-	return obj;
+
+	// Handle arrays - recursively convert each item
+	if (Array.isArray(item)) {
+		return item.map(mapToJson);
+	}
+
+	// Handle plain objects - recursively convert each property
+	if (item && typeof item === "object" && item.constructor === Object) {
+		const result: Record<string, unknown> = {};
+		for (const key in item) {
+			if (Object.prototype.hasOwnProperty.call(item, key)) {
+				result[key] = mapToJson((item as Record<string, unknown>)[key]);
+			}
+		}
+		return result;
+	}
+
+	// Return primitives and other types unchanged
+	return item;
 };
