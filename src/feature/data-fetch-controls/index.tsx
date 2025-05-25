@@ -261,7 +261,7 @@ const DataFetchControls = ({
 						variant="outline"
 						className="w-full"
 						onClick={handleCjSeqDownload}
-						disabled={!hasRectangle || isLoading}
+						disabled={isLoading}
 					>
 						Download CJSeq
 					</Button>

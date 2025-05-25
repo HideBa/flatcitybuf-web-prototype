@@ -84,7 +84,6 @@ const getReaderState = async (
 				y: query.point?.[1],
 			};
 			const spatialQuery = new WasmSpatialQuery(queryObj);
-			console.log("spatialQuery", spatialQuery);
 			iterator = await reader.select_spatial(spatialQuery);
 		} else if (query.type === "attr") {
 			const attrParams = query.conditions.map((cond) => {
@@ -251,9 +250,10 @@ export const getCjSeq = async (url: string, query: FcbQuery): Promise<File> => {
 		await initWasm();
 		const reader = await new HttpFcbReader(url);
 		const header = await reader.cityjson();
+		const headerJson = mapToJson(header);
 
 		// Create JSONL content starting with header
-		let jsonlContent = `${JSON.stringify(header)}\n`;
+		const jsonlLines = [JSON.stringify(headerJson)];
 
 		try {
 			// Instead of reusing state, create a dedicated iterator for the export
@@ -270,6 +270,8 @@ export const getCjSeq = async (url: string, query: FcbQuery): Promise<File> => {
 					minY: query.bbox?.[1],
 					maxX: query.bbox?.[2],
 					maxY: query.bbox?.[3],
+					x: query.point?.[0],
+					y: query.point?.[1],
 				};
 				const spatialQuery = new WasmSpatialQuery(queryObj);
 				iterator = await reader.select_spatial(spatialQuery);
@@ -281,25 +283,25 @@ export const getCjSeq = async (url: string, query: FcbQuery): Promise<File> => {
 				iterator = await reader.select_attr_query(attrQuery);
 			}
 
+			let counter = 0;
 			if (iterator) {
-				// Add features
 				while (true) {
 					const feature = await iterator.next();
-					if (feature === undefined) {
-						break;
-					}
+					counter++;
+					if (feature === undefined) break;
 					const featureJson = mapToJson(feature);
-					jsonlContent += `${JSON.stringify(featureJson)}\n`;
+					jsonlLines.push(JSON.stringify(featureJson));
 				}
-
-				// Clean up WASM resources
 			}
+			console.log("counter --", counter);
 		} finally {
 			console.log("finally");
 		}
+
+		const jsonlContent = jsonlLines.join("\n");
 		// Create and return file object
 		const blob = new Blob([jsonlContent], { type: "application/x-jsonlines" });
-		return new File([blob], "features.jsonl", {
+		return new File([blob], "data.city.jsonl", {
 			type: "application/x-jsonlines",
 		});
 	} catch (error) {

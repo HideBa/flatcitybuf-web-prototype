@@ -297,7 +297,9 @@ export const useFcbData = ({ fcbUrl }: Props) => {
 	);
 
 	const handleCjSeqDownload = useCallback(async () => {
-		if (!rectangle) return;
+		const filename = "data.city.jsonl";
+		let blobData: string | Blob | undefined;
+
 		if (lastFetchedData?.type === "spatial") {
 			if (!lastFetchedData.spatialQueryType) return;
 			const query = {
@@ -305,19 +307,28 @@ export const useFcbData = ({ fcbUrl }: Props) => {
 				bbox: lastFetchedData.bbox,
 				point: lastFetchedData.point,
 			};
-			const cjSeq = await getCjSeq(fcbUrl, query);
-			const url = URL.createObjectURL(cjSeq);
-			window.open(url, "_blank");
+			blobData = await getCjSeq(fcbUrl, query);
 		} else if (lastFetchedData?.type === "attribute") {
 			if (!lastFetchedData.attributes) return;
 			const query: AttributeQuery = {
 				type: "attr",
 				conditions: lastFetchedData.attributes,
 			};
-			const cjSeq = await getCjSeq(fcbUrl, query);
-			const url = URL.createObjectURL(cjSeq);
-			window.open(url, "_blank");
+			blobData = await getCjSeq(fcbUrl, query);
 		}
+
+		if (!blobData) return;
+
+		const file = new Blob([blobData], { type: "application/x-jsonlines" });
+		const url = URL.createObjectURL(file);
+
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = filename;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url); // cleanup
 	}, [
 		fcbUrl,
 		lastFetchedData?.attributes,
@@ -325,7 +336,6 @@ export const useFcbData = ({ fcbUrl }: Props) => {
 		lastFetchedData?.point,
 		lastFetchedData?.spatialQueryType,
 		lastFetchedData?.type,
-		rectangle,
 	]);
 
 	// Fetch metadata on mount
