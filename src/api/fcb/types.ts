@@ -67,3 +67,13 @@ export type ReaderState = {
 	currentPosition: number;
 	query: FcbQuery;
 };
+
+// Export format types
+export type ExportFormat = "cjseq" | "cityjson" | "obj";
+
+export interface ExportFormatOption {
+	value: ExportFormat;
+	label: string;
+	extension: string;
+	mimeType: string;
+}

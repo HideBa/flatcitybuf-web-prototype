@@ -288,15 +288,32 @@ const useHooks = ({ fcbUrl }: Props) => {
 
 		const minPoint = proj4("EPSG:4326", "EPSG:28992", min);
 		const maxPoint = proj4("EPSG:4326", "EPSG:28992", max);
-		// TODO: add flexible donwload
-		const query: FcbQuery = {
-			type: "bbox",
-			bbox: [minPoint[0], minPoint[1], maxPoint[0], maxPoint[1]],
-		};
+
+		let query: FcbQuery | AttributeQuery | undefined;
+		if (!lastFetchedData) {
+			query = {
+				type: "bbox",
+				bbox: [minPoint[0], minPoint[1], maxPoint[0], maxPoint[1]],
+			};
+		} else if (lastFetchedData.type === "bbox" && lastFetchedData.bbox) {
+			query = {
+				type: "bbox",
+				bbox: lastFetchedData.bbox,
+			};
+		} else if (
+			lastFetchedData.type === "attribute" &&
+			lastFetchedData.attributes
+		) {
+			query = {
+				type: "attr",
+				conditions: lastFetchedData.attributes,
+			};
+		}
+		if (!query) return;
 		const cjSeq = await getCjSeq(fcbUrl, query);
 		const url = URL.createObjectURL(cjSeq);
 		window.open(url, "_blank");
-	}, [fcbUrl, rectToDegrees, rectangle]);
+	}, [fcbUrl, rectToDegrees, rectangle, lastFetchedData]);
 
 	return {
 		viewerRef,

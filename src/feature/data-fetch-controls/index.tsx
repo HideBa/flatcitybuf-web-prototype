@@ -1,8 +1,19 @@
-import type { Condition, SpatialQueryType } from "@/api/fcb/types";
+import type {
+	Condition,
+	SpatialQueryType,
+	ExportFormat,
+} from "@/api/fcb/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import {
 	type FetchMode,
 	attributeConditionsAtom,
@@ -31,7 +42,7 @@ interface DataFetchControlsProps {
 		limit?: number,
 	) => void;
 	loadNextBatch: (offset: number, limit: number) => void;
-	handleCjSeqDownload: () => void;
+	handleCjSeqDownload: (format?: ExportFormat) => void;
 	hasRectangle: boolean;
 	hasPoint: boolean;
 }
@@ -59,6 +70,14 @@ const DataFetchControls = ({
 	const [width, setWidth] = useState(500);
 	const [isResizing, setIsResizing] = useState(false);
 	const [indexableColumns] = useAtom(indexableColumnsAtom);
+	const [exportFormat, setExportFormat] = useState<ExportFormat>("cjseq");
+
+	// Export format options
+	const exportFormatOptions = [
+		{ value: "cjseq" as const, label: "CityJSONSeq (.jsonl)" },
+		{ value: "cityjson" as const, label: "CityJSON (.json)" },
+		{ value: "obj" as const, label: "OBJ (.obj)" },
+	];
 
 	// Check if we have the required geometry for the current spatial query type
 	const hasSpatialData = spatialQueryType === "bbox" ? hasRectangle : hasPoint;
@@ -257,13 +276,39 @@ const DataFetchControls = ({
 				{/* Export Section */}
 				<div className="pt-2 border-t border-neutral-200">
 					<h3 className="text-lg font-medium mb-2">Export Options</h3>
+
+					{/* Export Format Selection */}
+					<div className="space-y-2 mb-3">
+						<Label htmlFor="export-format">Export Format</Label>
+						<Select
+							value={exportFormat}
+							onValueChange={(value: ExportFormat) => setExportFormat(value)}
+						>
+							<SelectTrigger>
+								<SelectValue placeholder="Select format" />
+							</SelectTrigger>
+							<SelectContent>
+								{exportFormatOptions.map((option) => (
+									<SelectItem key={option.value} value={option.value}>
+										{option.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+
 					<Button
 						variant="outline"
 						className="w-full"
-						onClick={handleCjSeqDownload}
+						onClick={() => handleCjSeqDownload(exportFormat)}
 						disabled={isLoading}
 					>
-						Download CJSeq
+						Download{" "}
+						{
+							exportFormatOptions
+								.find((opt) => opt.value === exportFormat)
+								?.label.split(" ")[0]
+						}
 					</Button>
 				</div>
 			</div>

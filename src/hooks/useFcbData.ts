@@ -1,6 +1,11 @@
 import { fetchFcbMeta } from "@/api/fcb/meta";
-import { fetchFcb, getCjSeq } from "@/api/fcb/query";
-import type { AttributeQuery, Condition, SpatialQuery } from "@/api/fcb/types";
+import { fetchFcb, getCjSeq, exportData } from "@/api/fcb/query";
+import type {
+	AttributeQuery,
+	Condition,
+	SpatialQuery,
+	ExportFormat,
+} from "@/api/fcb/types";
 import type { CjInfo } from "@/components/cjpreviewer";
 import {
 	attributeConditionsAtom,
@@ -296,47 +301,51 @@ export const useFcbData = ({ fcbUrl }: Props) => {
 		],
 	);
 
-	const handleCjSeqDownload = useCallback(async () => {
-		const filename = "data.city.jsonl";
-		let blobData: string | Blob | undefined;
+	const handleCjSeqDownload = useCallback(
+		async (format: ExportFormat = "cjseq") => {
+			let blobData: File | undefined;
 
-		if (lastFetchedData?.type === "spatial") {
-			if (!lastFetchedData.spatialQueryType) return;
-			const query = {
-				type: lastFetchedData.spatialQueryType,
-				bbox: lastFetchedData.bbox,
-				point: lastFetchedData.point,
-			};
-			blobData = await getCjSeq(fcbUrl, query);
-		} else if (lastFetchedData?.type === "attribute") {
-			if (!lastFetchedData.attributes) return;
-			const query: AttributeQuery = {
-				type: "attr",
-				conditions: lastFetchedData.attributes,
-			};
-			blobData = await getCjSeq(fcbUrl, query);
-		}
+			if (lastFetchedData?.type === "spatial") {
+				if (!lastFetchedData.spatialQueryType) return;
+				const query = {
+					type: lastFetchedData.spatialQueryType,
+					bbox: lastFetchedData.bbox,
+					point: lastFetchedData.point,
+				};
+				blobData = await exportData(fcbUrl, query, format);
+			} else if (lastFetchedData?.type === "attribute") {
+				if (!lastFetchedData.attributes) return;
+				const query: AttributeQuery = {
+					type: "attr",
+					conditions: lastFetchedData.attributes,
+				};
+				blobData = await exportData(fcbUrl, query, format);
+			}
 
-		if (!blobData) return;
+			if (!blobData) return;
 
-		const file = new Blob([blobData], { type: "application/x-jsonlines" });
-		const url = URL.createObjectURL(file);
+			// Use the filename from the exported file
+			const filename = blobData.name;
 
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = filename;
-		document.body.appendChild(a);
-		a.click();
-		document.body.removeChild(a);
-		URL.revokeObjectURL(url); // cleanup
-	}, [
-		fcbUrl,
-		lastFetchedData?.attributes,
-		lastFetchedData?.bbox,
-		lastFetchedData?.point,
-		lastFetchedData?.spatialQueryType,
-		lastFetchedData?.type,
-	]);
+			const url = URL.createObjectURL(blobData);
+
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url); // cleanup
+		},
+		[
+			fcbUrl,
+			lastFetchedData?.attributes,
+			lastFetchedData?.bbox,
+			lastFetchedData?.point,
+			lastFetchedData?.spatialQueryType,
+			lastFetchedData?.type,
+		],
+	);
 
 	// Fetch metadata on mount
 	useEffect(() => {

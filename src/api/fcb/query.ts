@@ -1,11 +1,14 @@
+import type { AsyncFeatureIter } from "flatcitybuf";
 import {
-	type AsyncFeatureIter,
 	HttpFcbReader,
 	WasmAttrQuery,
 	WasmSpatialQuery,
+	cjseqToCj,
+	cjToObj,
 } from "flatcitybuf";
-import { initWasm, mapToJson } from "./meta";
-import type { CjInfo, FcbQuery, ReaderState } from "./types";
+import initWasm from "flatcitybuf";
+import { mapToJson } from "./meta";
+import type { CjInfo, ExportFormat, FcbQuery, ReaderState } from "./types";
 
 // Default value for maximum features to fetch
 const DEFAULT_LIMIT = 10;
@@ -139,7 +142,6 @@ const fetchFeatures = async (
 
 			try {
 				const feature = await state.iterator.next();
-				console.log("feature --", feature);
 				if (feature === undefined) {
 					break;
 				}
@@ -243,7 +245,109 @@ export const fetchFcb = async (
 };
 
 /**
- * Download data as CJSeq format
+ * Export data in various formats
+ */
+export const exportData = async (
+	url: string,
+	query: FcbQuery,
+	format: ExportFormat = "cjseq",
+): Promise<File> => {
+	console.log("exportData --", url, query, format);
+
+	try {
+		// Use the existing fetchFeatures logic to get all features efficiently
+		// We'll collect all features by fetching in batches
+		const allFeatures: unknown[] = [];
+		let offset = 0;
+		const batchSize = 1000; // Reasonable batch size for memory management
+		const maxFeatures = 100000; // Safety limit to prevent memory issues
+
+		console.log("query --", query);
+		// Get the first batch to get header and total count
+		const firstBatch = await fetchFeatures(url, query, offset, batchSize);
+		const headerJson = mapToJson(firstBatch.header);
+
+		// Check if dataset is too large
+		if (firstBatch.totalCount > maxFeatures) {
+			console.warn(
+				`Dataset has ${firstBatch.totalCount} features, limiting export to ${maxFeatures} for memory safety`,
+			);
+		}
+
+		allFeatures.push(
+			...firstBatch.features.map((feature) => mapToJson(feature)),
+		);
+
+		// Continue fetching until we have all features (or hit the safety limit)
+		offset += firstBatch.features.length;
+		while (
+			allFeatures.length < firstBatch.totalCount &&
+			allFeatures.length < maxFeatures &&
+			firstBatch.features.length === batchSize
+		) {
+			const batch = await fetchFeatures(url, query, offset, batchSize);
+			allFeatures.push(...batch.features.map((feature) => mapToJson(feature)));
+			offset += batch.features.length;
+
+			// Break if we got fewer features than requested (end of data)
+			if (batch.features.length < batchSize) {
+				break;
+			}
+		}
+
+		// Generate content based on format
+		let content: string;
+		let filename: string;
+		let mimeType: string;
+
+		switch (format) {
+			case "cjseq": {
+				// CityJSONSeq format (JSONL)
+				const jsonlLines = [JSON.stringify(headerJson)];
+				for (const feature of allFeatures) {
+					jsonlLines.push(JSON.stringify(feature));
+				}
+				content = jsonlLines.join("\n");
+				filename = "data.city.jsonl";
+				mimeType = "application/x-jsonlines";
+				break;
+			}
+
+			case "cityjson": {
+				// CityJSON format (single JSON object)
+				const oneCityJson = cjseqToCj(headerJson, allFeatures);
+				const cityJson = mapToJson(oneCityJson);
+				content = JSON.stringify(cityJson, null, 2);
+				filename = "data.city.json";
+				mimeType = "application/json";
+				break;
+			}
+
+			case "obj": {
+				// OBJ format
+				// Create array with header as first element, features as rest
+				const dataArray = [headerJson, ...allFeatures];
+				content = cjToObj(dataArray);
+				filename = "data.obj";
+				mimeType = "text/plain";
+				break;
+			}
+
+			default:
+				throw new Error(`Unsupported export format: ${format}`);
+		}
+
+		// Create and return file object
+		const blob = new Blob([content], { type: mimeType });
+		return new File([blob], filename, { type: mimeType });
+	} catch (error) {
+		console.error("Error exporting data:", error);
+		throw error;
+	}
+};
+
+/**
+ * Download data as CJSeq format (legacy function - will be deprecated)
  */
 export const getCjSeq = async (url: string, query: FcbQuery): Promise<File> => {
 	try {

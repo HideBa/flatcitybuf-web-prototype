@@ -30,7 +30,7 @@ export const attributeConditionsAtom = atom<Condition[]>([
 	{
 		attribute: "identificatie",
 		operator: "Eq",
-		value: "NL.IMBAG.Pand.0273100000005183",
+		value: "NL.IMBAG.Pand.0503100000025027",
 	},
 ]);
 export const featureLimitAtom = atom<number>(10);
