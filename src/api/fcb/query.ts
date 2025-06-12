@@ -3,8 +3,8 @@ import {
 	HttpFcbReader,
 	WasmAttrQuery,
 	WasmSpatialQuery,
-	cjseqToCj,
 	cjToObj,
+	cjseqToCj,
 } from "flatcitybuf";
 import initWasm from "flatcitybuf";
 import { mapToJson } from "./meta";

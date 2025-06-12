@@ -1,7 +1,7 @@
 import { Allotment } from "allotment";
 import * as Cesium from "cesium";
 import {
-	CameraLookAt,
+	CameraFlyTo,
 	Entity,
 	ImageryLayer,
 	PointGraphics,
@@ -54,7 +54,6 @@ function App() {
 		52.00151347611216,
 		1000,
 	);
-	const offset = new Cesium.Cartesian3(0, 0, 1000);
 
 	// Data URL
 	const fcbUrl =
@@ -104,16 +103,16 @@ function App() {
 						>
 							<Scene />
 
-							<CameraLookAt
+							<CameraFlyTo
 								// Center of the netherlands
-								offset={offset}
+								destination={delftLatLng}
+								duration={0}
 								once
-								target={delftLatLng}
 							/>
 
 							<ScreenSpaceCameraController
 								enableRotate={!isDrawMode}
-								enableTranslate={true}
+								enableTranslate={!isDrawMode}
 								enableTilt={!isDrawMode}
 								enableLook={!isDrawMode}
 							/>

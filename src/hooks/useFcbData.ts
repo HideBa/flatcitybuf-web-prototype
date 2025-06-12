@@ -1,10 +1,10 @@
 import { fetchFcbMeta } from "@/api/fcb/meta";
-import { fetchFcb, getCjSeq, exportData } from "@/api/fcb/query";
+import { exportData, fetchFcb, getCjSeq } from "@/api/fcb/query";
 import type {
 	AttributeQuery,
 	Condition,
-	SpatialQuery,
 	ExportFormat,
+	SpatialQuery,
 } from "@/api/fcb/types";
 import type { CjInfo } from "@/components/cjpreviewer";
 import {
