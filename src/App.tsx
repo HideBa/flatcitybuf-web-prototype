@@ -99,6 +99,7 @@ function App() {
 							animation={false}
 							fullscreenButton={false}
 							geocoder={false}
+							full
 							sceneModePicker={false}
 						>
 							<Scene />
