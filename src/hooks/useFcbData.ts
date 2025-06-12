@@ -1,5 +1,5 @@
 import { fetchFcbMeta } from "@/api/fcb/meta";
-import { exportData, fetchFcb, getCjSeq } from "@/api/fcb/query";
+import { exportData, fetchFcb } from "@/api/fcb/query";
 import type {
 	AttributeQuery,
 	Condition,
