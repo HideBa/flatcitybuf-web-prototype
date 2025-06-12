@@ -27,7 +27,7 @@ import {
 	spatialQueryTypeAtom,
 } from "@/store";
 import { useAtom } from "jotai";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useState } from "react";
 import AttributeConditionForm from "../attribute";
 
@@ -71,6 +71,10 @@ const DataFetchControls = ({
 	const [isResizing, setIsResizing] = useState(false);
 	const [indexableColumns] = useAtom(indexableColumnsAtom);
 	const [exportFormat, setExportFormat] = useState<ExportFormat>("cjseq");
+
+	const handleDownload = useCallback(() => {
+		handleCjSeqDownload(exportFormat);
+	}, [handleCjSeqDownload, exportFormat]);
 
 	// Export format options
 	const exportFormatOptions = [
@@ -300,7 +304,7 @@ const DataFetchControls = ({
 					<Button
 						variant="outline"
 						className="w-full"
-						onClick={() => handleCjSeqDownload(exportFormat)}
+						onClick={handleDownload}
 						disabled={isLoading}
 					>
 						Download{" "}

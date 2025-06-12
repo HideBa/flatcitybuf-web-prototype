@@ -262,10 +262,10 @@ export const exportData = async (
 		const batchSize = 1000; // Reasonable batch size for memory management
 		const maxFeatures = 100000; // Safety limit to prevent memory issues
 
-		console.log("query --", query);
 		// Get the first batch to get header and total count
 		const firstBatch = await fetchFeatures(url, query, offset, batchSize);
 		const headerJson = mapToJson(firstBatch.header);
+		console.log("first batch --", firstBatch);
 
 		// Check if dataset is too large
 		if (firstBatch.totalCount > maxFeatures) {
@@ -277,6 +277,8 @@ export const exportData = async (
 		allFeatures.push(
 			...firstBatch.features.map((feature) => mapToJson(feature)),
 		);
+
+		console.log("allFeatures --", allFeatures);
 
 		// Continue fetching until we have all features (or hit the safety limit)
 		offset += firstBatch.features.length;
@@ -304,6 +306,7 @@ export const exportData = async (
 			case "cjseq": {
 				// CityJSONSeq format (JSONL)
 				const jsonlLines = [JSON.stringify(headerJson)];
+				console.log("allFeatures --", allFeatures);
 				for (const feature of allFeatures) {
 					jsonlLines.push(JSON.stringify(feature));
 				}
