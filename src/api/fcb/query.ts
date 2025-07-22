@@ -252,8 +252,6 @@ export const exportData = async (
 	query: FcbQuery,
 	format: ExportFormat = "cjseq",
 ): Promise<File> => {
-	console.log("exportData --", url, query, format);
-
 	try {
 		// Use the existing fetchFeatures logic to get all features efficiently
 		// We'll collect all features by fetching in batches

@@ -21,9 +21,11 @@ import {
 	featureLimitAtom,
 	fetchModeAtom,
 	hasMoreDataAtom,
+	heightMultiplierAtom,
 	indexableColumnsAtom,
 	isLoadingAtom,
 	lastFetchedDataAtom,
+	show3DVisualizationAtom,
 	spatialQueryTypeAtom,
 } from "@/store";
 import { useAtom } from "jotai";
@@ -71,6 +73,10 @@ const DataFetchControls = ({
 	const [isResizing, setIsResizing] = useState(false);
 	const [indexableColumns] = useAtom(indexableColumnsAtom);
 	const [exportFormat, setExportFormat] = useState<ExportFormat>("cjseq");
+	const [show3DVisualization, setShow3DVisualization] = useAtom(
+		show3DVisualizationAtom,
+	);
+	const [heightMultiplier, setHeightMultiplier] = useAtom(heightMultiplierAtom);
 
 	const handleDownload = useCallback(() => {
 		handleCjSeqDownload(exportFormat);
@@ -274,6 +280,44 @@ const DataFetchControls = ({
 						>
 							{isLoading ? "Loading..." : "Fetch FCB"}
 						</Button>
+					</div>
+				</div>
+
+				{/* 3D Visualization Section */}
+				<div className="pt-2 border-t border-neutral-200">
+					<h3 className="text-lg font-medium mb-2">3D Visualization</h3>
+
+					<div className="space-y-3">
+						{/* 3D Visualization Toggle */}
+						<div className="flex items-center justify-between">
+							<Label htmlFor="show3d">Show 3D Models</Label>
+							<Button
+								variant={show3DVisualization ? "default" : "outline"}
+								size="sm"
+								onClick={() => setShow3DVisualization(!show3DVisualization)}
+							>
+								{show3DVisualization ? "ON" : "OFF"}
+							</Button>
+						</div>
+
+						{/* Height Multiplier Control */}
+						{show3DVisualization && (
+							<div className="space-y-2">
+								<Label htmlFor="height-multiplier">
+									Height Multiplier: {heightMultiplier}x
+								</Label>
+								<Input
+									id="height-multiplier"
+									type="range"
+									min="0.1"
+									max="5"
+									step="0.1"
+									value={heightMultiplier}
+									onChange={(e) => setHeightMultiplier(Number(e.target.value))}
+									className="w-full"
+								/>
+							</div>
+						)}
 					</div>
 				</div>
 

@@ -91,3 +91,7 @@ export const indexableColumnsAtom = atom<Column[]>((get) => {
 
 	return fcbMeta.columns.filter((column) => column.attrIndex === true);
 });
+
+// 3D Visualization atoms
+export const show3DVisualizationAtom = atom<boolean>(false);
+export const heightMultiplierAtom = atom<number>(1.0);

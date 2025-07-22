@@ -19,14 +19,17 @@ import { useCesiumControls } from "./hooks/useCesiumControls";
 import { useFcbData } from "./hooks/useFcbData";
 
 import InfoPopup from "./components/InfoPopup";
+import FCBVisualization from "./components/cesium/fcbVisualization";
 import CjPreviewer from "./components/cjpreviewer";
 import { Spinner } from "./components/spinner";
 import DataFetchControls from "./feature/data-fetch-controls";
 import {
 	dataExtentAtom,
+	heightMultiplierAtom,
 	isLoadingAtom,
 	pointAtom,
 	rectangleAtom,
+	show3DVisualizationAtom,
 	spatialQueryTypeAtom,
 } from "./store";
 
@@ -48,6 +51,8 @@ function App() {
 	const [spatialQueryType] = useAtom(spatialQueryTypeAtom);
 	const [isLoading] = useAtom(isLoadingAtom);
 	const [dataExtent] = useAtom(dataExtentAtom);
+	const [show3DVisualization] = useAtom(show3DVisualizationAtom);
+	const [heightMultiplier] = useAtom(heightMultiplierAtom);
 
 	const delftLatLng = Cesium.Cartesian3.fromDegrees(
 		4.369802767481661,
@@ -190,6 +195,15 @@ function App() {
 										outlineWidth={2}
 									/>
 								</Entity>
+							)}
+
+							{/* 3D FCB Visualization */}
+							{show3DVisualization && (
+								<FCBVisualization
+									data={result}
+									visible={show3DVisualization}
+									heightMultiplier={heightMultiplier}
+								/>
 							)}
 						</Viewer>
 						{/* Info Popup */}
